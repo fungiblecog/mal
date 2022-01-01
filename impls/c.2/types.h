@@ -1,8 +1,9 @@
 #ifndef _MAL_TYPES_H
 #define _MAL_TYPES_H
 
-#include "libs/linked_list/linked_list.h"
+#include "libs/list/list.h"
 #include "libs/hashmap/hashmap.h"
+#include "libs/vector/vector.h"
 
 #define MALTYPE_SYMBOL 1
 #define MALTYPE_KEYWORD 2
@@ -38,8 +39,8 @@ struct MalType_s {
     char* mal_string;
     char* mal_keyword;
     list mal_list;
-    /* vector mal_vector;  TODO: implement a real vector */
-    /* hashmap mal_hashmap; TODO: implement a real hashmap */
+    vector mal_vector;
+    hashmap mal_hashmap;
     MalType* (*mal_function)(list);
     MalClosure* mal_closure;
     MalType* mal_atom;
@@ -63,11 +64,11 @@ MalType* make_float(double value);
 MalType* make_keyword(char* value);
 MalType* make_string(char* value);
 MalType* make_list(list value);
-MalType* make_vector(list value);
-MalType* make_hashmap(list value);
-MalType* make_true();
-MalType* make_false();
-MalType* make_nil();
+MalType* make_vector(vector value);
+MalType* make_hashmap(hashmap value);
+MalType* make_true(void);
+MalType* make_false(void);
+MalType* make_nil(void);
 MalType* make_atom(MalType* value);
 MalType* make_error(char* msg);
 MalType* make_error_fmt(char* fmt, ...);
@@ -96,5 +97,10 @@ int is_callable(MalType* val);
 int is_function(MalType* val);
 int is_closure(MalType* val);
 int is_macro(MalType* val);
+
+/* conversions */
+list vector_to_list(vector vec);
+list hashmap_to_list(hashmap lst);
+vector list_to_vector(list lst);
 
 #endif

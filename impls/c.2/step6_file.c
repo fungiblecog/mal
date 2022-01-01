@@ -153,16 +153,16 @@ int main(int argc, char** argv) {
   global_env = repl_env;
 
   ns* core = ns_make_core();
-  hashmap mappings = core->mappings;
+  list lst = hashmap_to_list(core->mappings);
 
-  while (mappings) {
-    char* symbol = mappings->data;
-    MalType*(*function)(list) = (MalType*(*)(list))mappings->next->data;
+  while (lst) {
+    char* symbol = lst->data;
+    MalType*(*function)(list) = (MalType*(*)(list))lst->next->data;
 
     env_set_C_fn(repl_env, symbol, function);
 
-    /* pop symbol and function from hashmap/list */
-    mappings = mappings->next->next;
+    /* pop symbol and function from the list */
+    lst = lst->next->next;
   }
 
   env_set_C_fn(repl_env, "eval", mal_eval);
@@ -173,9 +173,9 @@ int main(int argc, char** argv) {
 
 
   /* make command line arguments available in the environment */
-  list lst = NULL;
+  lst = NULL;
   for (int i = 2; i < argc; i++) {
-    lst = list_push(lst, make_string(argv[i]));
+    lst = list_cons(lst, make_string(argv[i]));
   }
   env_set(repl_env, make_symbol("*ARGV*"), make_list(list_reverse(lst)));
 
@@ -221,9 +221,9 @@ int main(int argc, char** argv) {
 MalType* eval_ast(MalType* ast, Env* env) {
 
   /* forward references */
-  list evaluate_list(list lst, Env* env);
-  list evaluate_vector(list lst, Env* env);
-  list evaluate_hashmap(list lst, Env* env);
+  MalType *evaluate_list(list lst, Env* env);
+  MalType *evaluate_vector(vector vec, Env* env);
+  MalType *evaluate_hashmap(hashmap map, Env* env);
 
   if (is_symbol(ast)) {
 
@@ -237,33 +237,15 @@ MalType* eval_ast(MalType* ast, Env* env) {
   }
   else if (is_list(ast)) {
 
-    list result = evaluate_list(ast->value.mal_list, env);
-
-    if (!result || !is_error(result->data)) {
-      return make_list(result);
-    } else {
-      return result->data;
-    }
+    return evaluate_list(ast->value.mal_list, env);
   }
   else if (is_vector(ast)) {
 
-    list result = evaluate_vector(ast->value.mal_list, env);
-
-    if (!result || !is_error(result->data)) {
-        return make_vector(result);
-    } else {
-      return result->data;
-    }
+    return evaluate_vector(ast->value.mal_vector, env);
   }
   else if (is_hashmap(ast)) {
 
-    list result = evaluate_hashmap(ast->value.mal_list, env);
-
-    if (!result || !is_error(result->data)) {
-      return make_hashmap(result);
-    } else {
-      return result->data;
-    }
+    return evaluate_hashmap(ast->value.mal_hashmap, env);
   }
   else {
     return ast;
@@ -310,7 +292,15 @@ void eval_letstar(MalType** ast, Env** env) {
     return;
   }
 
-  list bindings_list = bindings->value.mal_list;
+  list bindings_list = NULL;
+  /* bindings can be a list or vector */
+  if (is_vector(bindings)) {
+    bindings_list = vector_to_list(bindings->value.mal_vector);
+  }
+  else {
+    bindings_list = bindings->value.mal_list;
+  }
+
   if (list_count(bindings_list) % 2 == 1) {
     *ast = make_error("'let*': expected an even number of binding pairs");
     return;
@@ -393,7 +383,13 @@ MalType* eval_fnstar(MalType* ast, Env* env) {
   }
 
   MalType* params = lst->next->data;
-  list params_list = params->value.mal_list;
+
+  list params_list;
+  if (is_vector(params)) {
+    params_list = vector_to_list(params->value.mal_vector);
+  } else {
+    params_list = params->value.mal_list;
+  }
 
   MalType* more_symbol = NULL;
 
@@ -431,7 +427,7 @@ MalType* eval_do(MalType* ast, Env* env) {
   return lst->data;
 }
 
-list evaluate_list(list lst, Env* env) {
+MalType *evaluate_list(list lst, Env* env) {
 
   list evlst = NULL;
   while (lst) {
@@ -439,52 +435,54 @@ list evaluate_list(list lst, Env* env) {
     MalType* val = EVAL(lst->data, env);
 
     if (is_error(val)) {
-      return list_make(val);
+      return val;
     }
 
-    evlst = list_push(evlst, val);
+    evlst = list_cons(evlst, val);
     lst = lst->next;
   }
-  return list_reverse(evlst);
+  return make_list(list_reverse(evlst));
 }
 
-list evaluate_vector(list lst, Env* env) {
-  /* TODO: implement a real vector */
-  list evlst = NULL;
+MalType *evaluate_vector(vector vec, Env* env) {
+
+  list lst = vector_to_list(vec);
+  vector evec = vector_make();
+
   while (lst) {
 
     MalType* val = EVAL(lst->data, env);
 
     if (is_error(val)) {
-      return list_make(val);
+      return val;
     }
 
-    evlst = list_push(evlst, val);
+    evec = vector_push(evec, val);
     lst = lst->next;
   }
-  return list_reverse(evlst);
+  return make_vector(evec);
 }
 
-list evaluate_hashmap(list lst, Env* env) {
-  /* TODO: implement a real hashmap */
-  list evlst = NULL;
+MalType *evaluate_hashmap(hashmap map, Env* env) {
+
+  list lst = hashmap_to_list(map);
+  hashmap emap = hashmap_make();
+
   while (lst) {
 
     /* keys are unevaluated */
-    evlst = list_push(evlst, lst->data);
-    lst = lst->next;
-
+    MalType* key = lst->data;
     /* values are evaluated */
-    MalType* val = EVAL(lst->data, env);
+    MalType* val = EVAL(lst->next->data, env);
 
     if (is_error(val)) {
-      return list_make(val);
+      return val;
     }
 
-    evlst = list_push(evlst, val);
-    lst = lst->next;
+    emap = hashmap_put(emap, key, val);
+    lst = lst->next->next;
   }
-  return list_reverse(evlst);
+  return make_hashmap(emap);
 }
 
 MalType* regularise_parameters(list* args, MalType** more_symbol) {
@@ -539,10 +537,11 @@ MalType* regularise_parameters(list* args, MalType** more_symbol) {
     else {
 
       if (list_findf(regular_args, val->value.mal_symbol, symbol_fn) > 0) {
-        return make_error_fmt("duplicate symbol in argument list: '%s'", pr_str(val, UNREADABLY));
+        return make_error_fmt("duplicate symbol in argument list: '%s'", \
+                              pr_str(val, UNREADABLY));
       }
       else {
-        regular_args = list_push(regular_args, val);
+        regular_args = list_cons(regular_args, val);
       }
     }
     *args = (*args)->next;

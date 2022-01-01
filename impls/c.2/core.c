@@ -97,11 +97,11 @@ MalType* mal_with_meta(list);
 MalType* mal_dot(list);
 #endif
 
-ns* ns_make_core() {
+ns* ns_make_core(void) {
 
   ns* core = GC_MALLOC(sizeof(*core));
 
-  hashmap core_functions = NULL;
+  hashmap core_functions = hashmap_make();
 
   /* arithmetic */
   core_functions = hashmap_put(core_functions, "+", mal_add);
@@ -664,14 +664,23 @@ MalType* mal_nth(list args) {
   MalType* n = args->next->data;
 
   if (!is_sequential(lst)) {
-    return make_error_fmt("'nth': first argument is not a list or vector: '%s'\n", pr_str(lst, UNREADABLY));
+    return make_error_fmt("'nth': first argument is not a list or vector: '%s'\n", \
+                          pr_str(lst, UNREADABLY));
   }
 
   if (!is_integer(n)) {
-    return make_error_fmt("'nth': second argument is not an integer: '%s'\n", pr_str(lst, UNREADABLY));
+    return make_error_fmt("'nth': second argument is not an integer: '%s'\n", \
+                          pr_str(lst, UNREADABLY));
   }
 
-  MalType* result = list_nth(lst->value.mal_list, n->value.mal_integer);
+  MalType* result;
+
+  if (is_list(lst)) {
+    result = list_nth(lst->value.mal_list, n->value.mal_integer);
+  }
+  else {
+    result = vector_get(lst->value.mal_vector, n->value.mal_integer);
+  }
 
   if (result) {
     return result;
@@ -694,12 +703,21 @@ MalType* mal_first(list args) {
     return make_error("'first': expected a list or vector");
   }
 
-  MalType* result = list_first(lst->value.mal_list);
-
-  if (result) {
-    return result;
+  if (is_list(lst)) {
+    if (!lst->value.mal_list) {
+      return make_nil();
+    } else {
+      return list_first(lst->value.mal_list);
+    }
   }
-  else {
+
+  else if (is_vector(lst)) {
+    if (vector_empty(lst->value.mal_vector)) {
+      return make_nil();
+    } else
+      return vector_get(lst->value.mal_vector, 0);
+  }
+  else { /* is_nil(lst) */
     return make_nil();
   }
 }
@@ -710,22 +728,22 @@ MalType* mal_rest(list args) {
     return make_error("'rest': expected exactly one argument");
   }
 
-  MalType* lst = args->data;
+  MalType* arg = args->data;
 
-  if (!is_sequential(lst) && !is_nil(lst)) {
+  if (!is_sequential(arg) && !is_nil(arg)) {
     return make_error("'rest': expected a list or vector");
   }
 
-  list result = list_rest(lst->value.mal_list);
-
-  if (lst) {
-    return make_list(result);
+  if (is_list(arg)) {
+    return make_list(list_rest(arg->value.mal_list));
+  }
+  else if (is_vector(arg)) {
+    return make_list(list_rest(vector_to_list(arg->value.mal_vector)));
   }
   else {
-    return make_nil();
+    return make_list(NULL);
   }
 }
-
 
 MalType* mal_cons(list args) {
 
@@ -734,12 +752,19 @@ MalType* mal_cons(list args) {
   }
 
   MalType* lst = args->next->data;
-  if (is_sequential(lst)) {
-     return make_list(list_push(lst->value.mal_list, args->data));
+  if (is_list(lst)) {
+     return make_list(list_cons(lst->value.mal_list, args->data));
   }
+
+  else if (is_vector(lst)) {
+
+    return make_list(list_cons(vector_to_list(lst->value.mal_vector), args->data));
+  }
+
   else if (is_nil(lst)) {
-    return make_list(list_push(NULL, args->data));
+    return make_list(list_cons(NULL, args->data));
   }
+
   else {
     return make_error_fmt("'cons': second argument is not a list or vector: '%s'\n", \
                           pr_str(lst, UNREADABLY));
@@ -763,11 +788,18 @@ MalType* mal_concat(list args) {
       args = args->next;
       continue;
     }
-    /* concatenate lists and vectors */
-    else if (is_sequential(val)) {
+    /* concatenate lists */
+    else if (is_list(val)) {
 
       list lst = val->value.mal_list;
       new_list = list_concatenate(new_list, lst);
+      args = args->next;
+    }
+    /* concatenate vectors */
+    else if (is_vector(val)) {
+
+      vector vec = val->value.mal_vector;
+      new_list = list_concatenate(new_list, vector_to_list(vec));
       args = args->next;
     }
     /* raise an error for any non-sequence types */
@@ -790,9 +822,17 @@ MalType* mal_count(list args) {
         return make_error_fmt("'count': argument is not a list or vector: '%s'\n", \
                               pr_str(val, UNREADABLY));
   }
-  return make_integer(list_count(val->value.mal_list));
-}
 
+  if (is_list(val)) {
+    return make_integer(list_count(val->value.mal_list));
+  }
+  else if (is_vector(val)) {
+      return make_integer(vector_count(val->value.mal_vector));
+    }
+  else { /* nil */
+    return make_integer(0);
+  }
+}
 
 MalType* mal_list_questionmark(list args) {
 
@@ -817,12 +857,18 @@ MalType* mal_empty_questionmark(list args) {
 
   MalType* val = args->data;
   if (!is_sequential(val)) {
-    return make_error_fmt("'empty?': argument is not a list or vector: '%s'\n", pr_str(val, UNREADABLY));
+    return make_error_fmt("'empty?': argument is not a list or vector: '%s'\n", \
+                          pr_str(val, UNREADABLY));
   }
 
-  if (!val->value.mal_list) {
+  if (is_list(val) && !val->value.mal_list) {
     return make_true();
   }
+
+  else if (is_vector(val) && vector_empty(val->value.mal_vector)) {
+    return make_true();
+  }
+
   else {
     return make_false();
   }
@@ -966,7 +1012,7 @@ MalType* mal_swap_bang(list args) {
   }
 
   list fn_args = args->next->next;
-  fn_args = list_push(fn_args, val->value.mal_atom);
+  fn_args = list_cons(fn_args, val->value.mal_atom);
 
   MalType* result = apply(fn, fn_args);
 
@@ -1013,17 +1059,20 @@ MalType* mal_apply(list args) {
   args = args->next;
   list lst = NULL;
   while(args->next) {
-    lst = list_push(lst, args->data);
+    lst = list_cons(lst, args->data);
     args = args->next;
   }
 
   MalType* final = args->data;
 
-  if (is_sequential(final)) {
+  if (is_list(final)) {
     lst = list_concatenate(list_reverse(lst), final->value.mal_list);
   }
+  else if (is_vector(final)) {
+    lst = list_concatenate(list_reverse(lst), vector_to_list(final->value.mal_vector));
+  }
   else {
-    lst = list_push(lst, final);
+    lst = list_cons(lst, final);
     lst = list_reverse(lst);
   }
 
@@ -1048,7 +1097,14 @@ MalType* mal_map(list args) {
     return make_error("'map': second argument must be a list or vector");
   }
 
-  list arg_list = arg->value.mal_list;
+  list arg_list;
+  if (is_list(arg)) {
+    arg_list = arg->value.mal_list;
+  }
+  else {
+    arg_list = vector_to_list(arg->value.mal_vector);
+  }
+
   list result_list = NULL;
 
   while(arg_list) {
@@ -1060,7 +1116,7 @@ MalType* mal_map(list args) {
       return result;
     }
     else {
-      result_list = list_push(result_list, result);
+      result_list = list_cons(result_list, result);
     }
     arg_list = arg_list->next;
   }
@@ -1182,7 +1238,6 @@ MalType* mal_keyword_questionmark(list args) {
 MalType* mal_vec(list args) {
 
   /* Accepts a single argument */
-
   if (!args || args->next) {
     return make_error("'vec': expected a single argument");
   }
@@ -1196,12 +1251,43 @@ MalType* mal_vec(list args) {
   MalType* new_val = copy_type(val);
   new_val->type = MALTYPE_VECTOR;
 
+  if (is_list(val)) {
+
+    list lst = val->value.mal_list;
+    vector vec = vector_make();
+
+    while(lst) {
+      vec = vector_push(vec, lst->data);
+      lst = lst->next;
+    }
+    new_val->value.mal_vector = vec;
+  }
+  else if (is_hashmap(val)) {
+
+    list lst = hashmap_to_list(val->value.mal_hashmap);
+    vector vec = vector_make();
+
+    while(lst) {
+      vec = vector_push(vec, lst->data);
+      lst = lst->next;
+    }
+    new_val->value.mal_vector = vec;
+  }
+
   return new_val;
 }
 
 MalType* mal_vector(list args) {
+
   /* Accepts any number and type of arguments */
-  return make_vector(args);
+  vector vec = vector_make();
+
+  while(args) {
+    vec = vector_push(vec, args->data);
+    args = args->next;
+  }
+
+  return make_vector(vec);
 }
 
 MalType* mal_vector_questionmark(list args) {
@@ -1243,6 +1329,8 @@ MalType* mal_hash_map(list args) {
   }
 
   list args_iterator = args;
+  hashmap map = hashmap_make();
+
   while (args_iterator) {
 
     MalType* val = args_iterator->data;
@@ -1250,11 +1338,11 @@ MalType* mal_hash_map(list args) {
     if (!is_keyword(val) && !is_string(val) && !is_symbol(val)) {
       return make_error("'hashmap': keys must be keywords, symbols or strings");
     }
-    args_iterator = args_iterator->next;
-    args_iterator = args_iterator->next;
-  }
 
-  return make_hashmap(args);
+    map = hashmap_put(map, args_iterator->data, args_iterator->next->data);
+    args_iterator = args_iterator->next->next;
+  }
+  return make_hashmap(map);
 }
 
 MalType* mal_map_questionmark(list args) {
@@ -1273,9 +1361,7 @@ MalType* mal_map_questionmark(list args) {
   }
 }
 
-
 MalType* mal_get(list args) {
-  /* TODO: implement a proper hashmap */
 
   if (!args || args->next->next) {
     return make_error("'get': expected exactly two arguments");
@@ -1287,13 +1373,15 @@ MalType* mal_get(list args) {
     return make_error("'get': expected a map for the first argument");
   }
 
-  MalType* result = hashmap_getf(map->value.mal_list, get_fn(args->next->data), get_fn);
+  if (is_nil(map)) { return make_nil(); }
 
-  if (!result) {
+  MalType* result =  hashmap_getf(map->value.mal_hashmap, args->next->data, get_fn);
+
+  if(result) {
+    return result;
+  } else {
     return make_nil();
   }
-
-  return result;
 }
 
 MalType* mal_contains_questionmark(list args) {
@@ -1308,7 +1396,7 @@ MalType* mal_contains_questionmark(list args) {
     return make_error("'contains?': expected a map for the first argument");
   }
 
-  MalType* result = hashmap_getf(map->value.mal_list, get_fn(args->next->data), get_fn);
+  MalType* result = hashmap_getf(map->value.mal_hashmap, args->next->data, get_fn);
 
   if (!result) {
     return make_false();
@@ -1334,26 +1422,15 @@ MalType* mal_assoc(list args) {
     return make_error("'assoc': expected even number of key/value pairs");
   }
 
-
-  list new_lst = list_reverse(list_copy(map->value.mal_list));
+  hashmap result = map->value.mal_hashmap;
   args = args->next;
 
   while (args) {
 
-    /* try to update copy in-place */
-    hashmap result = hashmap_updatef(new_lst, get_fn(args->data), args->next->data, get_fn);
-
-    if (result) {
-      new_lst = result;
-    }
-    /* add a new key/value pair */
-    else {
-      new_lst = list_push(new_lst,args->next->data);
-      new_lst = list_push(new_lst,args->data);
-    }
+    result = hashmap_updatef(result, args->data, args->next->data, get_fn);
     args = args->next->next;
   }
-  return make_hashmap(new_lst);
+  return make_hashmap(result);
 }
 
 MalType* mal_dissoc(list args) {
@@ -1368,7 +1445,7 @@ MalType* mal_dissoc(list args) {
     return make_error("'dissoc': expected a map for the first argument");
   }
 
-  list source_list = map->value.mal_list;
+  list source_list = hashmap_to_list(map->value.mal_hashmap);
   list new_list = NULL;
   args = args->next;
 
@@ -1377,12 +1454,11 @@ MalType* mal_dissoc(list args) {
     list dis_args = args;
     long dis = 0;
 
-
     while(dis_args) {
 
       list tmp = NULL;
-      tmp = list_push(tmp, source_list->data);
-      tmp = list_push(tmp, dis_args->data);
+      tmp = list_cons(tmp, source_list->data);
+      tmp = list_cons(tmp, dis_args->data);
       MalType* cmp = mal_equals(tmp);
 
       if (is_true(cmp)) {
@@ -1393,13 +1469,21 @@ MalType* mal_dissoc(list args) {
     }
 
     if (!dis) {
-      new_list = list_push(new_list, source_list->data);
-      new_list = list_push(new_list, source_list->next->data);
+      new_list = list_cons(new_list, source_list->data);
+      new_list = list_cons(new_list, source_list->next->data);
     }
     source_list = source_list->next->next;
   }
 
-  return make_hashmap(list_reverse(new_list));
+  hashmap result = hashmap_make();
+  new_list = list_reverse(new_list);
+
+  while (new_list) {
+    result = hashmap_put(result, new_list->data, new_list->next->data);
+    new_list = new_list->next->next;
+  }
+
+  return make_hashmap(result);
 }
 
 
@@ -1415,7 +1499,7 @@ MalType* mal_keys(list args) {
     return make_error("'keys': expected a map");
   }
 
-  list lst = map->value.mal_list;
+  list lst = hashmap_to_list(map->value.mal_hashmap);
   if (!lst) {
     return make_list(NULL);
   }
@@ -1424,7 +1508,7 @@ MalType* mal_keys(list args) {
   while(lst->next->next) {
 
     lst = lst->next->next;
-    result = list_push(result, lst->data);
+    result = list_cons(result, lst->data);
   }
   return make_list(result);
 }
@@ -1441,7 +1525,7 @@ MalType* mal_vals(list args) {
     return make_error("'vals': expected a map");
   }
 
-  list lst = map->value.mal_list;
+  list lst = hashmap_to_list(map->value.mal_hashmap);
   if (!lst) {
     return make_list(NULL);
   }
@@ -1451,7 +1535,7 @@ MalType* mal_vals(list args) {
   while(lst->next) {
 
     lst = lst->next->next;
-    result = list_push(result, lst->data);
+    result = list_cons(result, lst->data);
   }
   return make_list(result);
 }
@@ -1550,23 +1634,17 @@ MalType* mal_conj(list args) {
 
   if (is_list(lst)) {
 
-    list new_lst = list_reverse(list_copy(lst->value.mal_list));
-
-    while(rest) {
-      new_lst = list_push(new_lst, rest->data);
-      rest = rest->next;
-  }
-    return make_list(new_lst);
+    return make_list(list_concatenate(list_reverse(rest), lst->value.mal_list));
   }
   else /* is_vector(lst) */ {
 
-    list new_lst = list_copy(lst->value.mal_list);
+    vector vec = vector_copy(lst->value.mal_vector);
 
     while(rest) {
-      new_lst = list_push(new_lst, rest->data);
+      vec = vector_push(vec, rest->data);
       rest = rest->next;
     }
-    return make_vector(list_reverse(new_lst));
+    return make_vector(vec);
   }
 }
 
@@ -1578,9 +1656,9 @@ MalType* mal_seq(list args) {
 
   MalType* val = args->data;
 
-  if (is_sequential(val)) {
+  if (is_list(val)) {
 
-    /* empy list or vector */
+    /* empty list */
     if (!val->value.mal_list) {
       return make_nil();
     }
@@ -1588,6 +1666,17 @@ MalType* mal_seq(list args) {
       return make_list(val->value.mal_list);
     }
   }
+  else if (is_vector(val)) {
+
+    /* empty vector */
+    if (vector_empty(val->value.mal_vector)) {
+      return make_nil();
+    }
+    else {
+      return make_list(vector_to_list(val->value.mal_vector));
+    }
+  }
+
   else if (is_string(val)) {
 
     /* empty string */
@@ -1603,7 +1692,7 @@ MalType* mal_seq(list args) {
         char* new_ch = GC_MALLOC(sizeof(*new_ch));
         strncpy(new_ch, ch, 1);
 
-        lst = list_push(lst, make_string(new_ch));
+        lst = list_cons(lst, make_string(new_ch));
         ch++;
       }
       return make_list(list_reverse(lst));
@@ -1706,8 +1795,20 @@ MalType* print(list args, int readably, char* separator) {
 
 MalType* equal_lists(MalType* list1, MalType* list2) {
 
-  list first = list1->value.mal_list;
-  list second = list2->value.mal_list;
+  list first = NULL;
+  list second = NULL;
+
+  if (is_vector(list1)) {
+    first = vector_to_list(list1->value.mal_vector);
+  } else {
+    first = list1->value.mal_list;
+  }
+
+  if (is_vector(list2)) {
+    second = vector_to_list(list2->value.mal_vector);
+  } else {
+    second = list2->value.mal_list;
+  }
 
   if (list_count(first) != list_count(second)) {
     return make_false();
@@ -1717,8 +1818,8 @@ MalType* equal_lists(MalType* list1, MalType* list2) {
     while(first && second) {
 
       list args = NULL;
-      args = list_push(args, second->data);
-      args = list_push(args, first->data);
+      args = list_cons(args, second->data);
+      args = list_cons(args, first->data);
 
       MalType* cmp = mal_equals(args);
 
@@ -1735,8 +1836,8 @@ MalType* equal_lists(MalType* list1, MalType* list2) {
 
 MalType* equal_hashmaps(MalType* map1, MalType* map2) {
 
-  list first = map1->value.mal_list;
-  list second = map2->value.mal_list;
+  list first = hashmap_to_list(map1->value.mal_hashmap);
+  list second = hashmap_to_list(map2->value.mal_hashmap);
 
   if (!first && !second) {
     return make_true();
@@ -1750,15 +1851,15 @@ MalType* equal_hashmaps(MalType* map1, MalType* map2) {
 
     MalType* key1 = first->data;
     MalType* val1 = first->next->data;
-    MalType* val2 = hashmap_getf(second, get_fn(key1), get_fn);
+    MalType* val2 = hashmap_getf(map2->value.mal_hashmap, key1, get_fn);
 
     if (!val2) {
       return make_false();
     }
 
     list args = NULL;
-    args = list_push(args, val1);
-    args = list_push(args, val2);
+    args = list_cons(args, val1);
+    args = list_cons(args, val2);
 
     MalType* cmp = mal_equals(args);
 
@@ -1844,8 +1945,8 @@ MalType* mal_dot(list args) {
       return make_error_fmt("'.': expected strings for argument types: '%s'", pr_str(val_type, UNREADABLY));
     }
 
-    arg_types_list = list_push(arg_types_list, val_type);
-    arg_vals_list = list_push(arg_vals_list, val);
+    arg_types_list = list_cons(arg_types_list, val_type);
+    arg_vals_list = list_cons(arg_vals_list, val);
 
     args = args->next->next;
   }

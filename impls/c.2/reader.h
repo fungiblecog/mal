@@ -34,7 +34,6 @@ Reader* tokenize(char* token_string);
 char* read_fixed_length_token(char* current, Token** ptoken, int n);
 char* read_string_token(char* current, Token** ptoken);
 char* read_comment_token(char* current, Token** ptoken);
-//char* read_integer_token(char* current, Token** ptoken);
 char* read_number_token(char* current, Token** ptoken);
 char* read_symbol_token(char* current, Token** ptoken);
 char* read_keyword_token(char* current, Token** ptoken);

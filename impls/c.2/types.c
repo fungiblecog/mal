@@ -9,7 +9,6 @@ MalType THE_TRUE = {MALTYPE_TRUE, 0, 0, {0}};
 MalType THE_FALSE = {MALTYPE_FALSE, 0, 0, {0}};
 MalType THE_NIL = {MALTYPE_NIL, 0, 0, {0}};
 
-
 inline int is_sequential(MalType* val) {
   return (val->type == MALTYPE_LIST || val->type == MALTYPE_VECTOR);
 }
@@ -154,21 +153,21 @@ MalType* make_list(list value) {
   return mal_val;
 }
 
-MalType* make_vector(list value) {
+MalType* make_vector(vector value) {
 
   MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_VECTOR;
-  mal_val->value.mal_list = value;
+  mal_val->value.mal_vector = value;
   mal_val->metadata = NULL;
 
   return mal_val;
 }
 
-MalType* make_hashmap(list value) {
+MalType* make_hashmap(hashmap value) {
 
   MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_HASHMAP;
-  mal_val->value.mal_list = value;
+  mal_val->value.mal_hashmap = value;
   mal_val->metadata = NULL;
 
   return mal_val;
@@ -213,15 +212,15 @@ MalType* make_closure(Env* env, MalType* parameters, MalType* definition, MalTyp
   return mal_val;
 }
 
-inline MalType* make_true() {
+inline MalType* make_true(void) {
   return &THE_TRUE;
 }
 
-inline MalType* make_false() {
+inline MalType* make_false(void) {
   return &THE_FALSE;
 }
 
-inline MalType* make_nil() {
+inline MalType* make_nil(void) {
   return &THE_NIL;
 }
 
@@ -280,4 +279,41 @@ MalType* copy_type(MalType* value) {
   new_val->metadata = value->metadata;
 
   return new_val;
+}
+
+/* conversions */
+list vector_to_list(vector vec) {
+
+  if(vec->count == 0) { return NULL; }
+
+  list lst = NULL;
+  for (int i = 0; i< vec->count; i++) {
+    lst = list_cons(lst, vec->data[i]);
+  }
+  return list_reverse(lst);
+}
+
+vector list_to_vector(list lst) {
+
+  vector vec = vector_make();
+
+  while(lst) {
+    vec = vector_push(vec, lst->data);
+  }
+  return vec;
+}
+
+list hashmap_to_list(hashmap map) {
+
+  if(map->count == 0) { return NULL; }
+
+  list lst = NULL;
+  entry pair = map->head;
+
+  while(pair) {
+    lst = list_cons(lst, pair->key);
+    lst = list_cons(lst, pair->val);
+    pair = pair->next;
+  }
+  return list_reverse(lst);
 }

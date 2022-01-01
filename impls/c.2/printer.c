@@ -17,9 +17,7 @@
 
 char* pr_str(MalType* val, int readably) {
 
-  if (!val) {
-    return "";
-  }
+  if (!val) { return ""; }
 
   switch(val->type) {
 
@@ -70,17 +68,17 @@ char* pr_str(MalType* val, int readably) {
 
   case MALTYPE_LIST:
 
-    return pr_str_list(val->value.mal_list, readably, "(", ")", " ");
+    return pr_str_list(val->value.mal_list, readably);
     break;
 
   case MALTYPE_VECTOR:
 
-    return pr_str_list(val->value.mal_list, readably, "[", "]", " ");
+    return pr_str_vector(val->value.mal_vector, readably);
     break;
 
   case MALTYPE_HASHMAP:
 
-    return pr_str_list(val->value.mal_list, readably, "{", "}", " ");
+    return pr_str_hashmap(val->value.mal_hashmap, readably);
     break;
 
   case MALTYPE_FUNCTION:
@@ -95,32 +93,43 @@ char* pr_str(MalType* val, int readably) {
       MalType* more_symbol = (val->value.mal_closure)->more_symbol;
 
       list lst = parameters->value.mal_list;
+      MalType* args;
 
+      /* to pretty print the more symbol it needs to be
+         added to the end of the function argument list */
       if (more_symbol) {
-        lst = list_reverse(lst);
-        lst = list_push(lst, make_symbol(snprintfbuf(STRING_BUFFER_SIZE, "%s%s", "&", more_symbol->value.mal_symbol)));
-        lst = list_reverse(lst);
+        char* symbol = snprintfbuf(STRING_BUFFER_SIZE, "%s%s", "&",     \
+                                   more_symbol->value.mal_symbol);
+
+        args = make_list(list_concatenate(lst, list_make(make_symbol(symbol))));
+      }
+      else {
+        args = make_list(lst);
       }
 
       if (val->is_macro) {
         return snprintfbuf(FUNCTION_BUFFER_SIZE, "#<function::macro: (fn* %s %s))", \
-                           pr_str(make_list(lst), UNREADABLY), pr_str(definition, UNREADABLY));
+                           pr_str(args, UNREADABLY),          \
+                           pr_str(definition, UNREADABLY));
       }
       else {
         return snprintfbuf(FUNCTION_BUFFER_SIZE, "#<function::closure: (fn* %s %s))", \
-                           pr_str(make_list(lst), UNREADABLY), pr_str(definition, UNREADABLY));
+                           pr_str(args, UNREADABLY),          \
+                           pr_str(definition, UNREADABLY));
       }
     }
   break;
 
   case MALTYPE_ATOM:
 
-    return snprintfbuf(STRING_BUFFER_SIZE, "(atom %s)", pr_str(val->value.mal_atom, readably));
+    return snprintfbuf(STRING_BUFFER_SIZE, "(atom %s)", \
+                       pr_str(val->value.mal_atom, readably));
     break;
 
   case MALTYPE_ERROR:
 
-    return snprintfbuf(STRING_BUFFER_SIZE, "Uncaught error: %s", pr_str(val->value.mal_error, UNREADABLY));
+    return snprintfbuf(STRING_BUFFER_SIZE, "Uncaught error: %s", \
+                       pr_str(val->value.mal_error, UNREADABLY));
     break;
 
   default:
@@ -131,7 +140,7 @@ char* pr_str(MalType* val, int readably) {
 }
 
 
-char* pr_str_list(list lst, int readably, char* start_delimiter, char* end_delimiter, char* separator) {
+char* pr_str_sequential(list lst, int readably, char* start_delimiter, char* end_delimiter, char* separator) {
 
   char* list_buffer = GC_MALLOC(sizeof(*list_buffer) * LIST_BUFFER_SIZE);
   long buffer_length = LIST_BUFFER_SIZE;
@@ -186,10 +195,25 @@ char* pr_str_list(list lst, int readably, char* start_delimiter, char* end_delim
   return list_buffer;
 }
 
+char* pr_str_list(list lst, int readably) {
+
+  return pr_str_sequential(lst, readably, "(", ")", " ");
+}
+
+char* pr_str_vector(vector vec, int readably) {
+
+  return pr_str_sequential(vector_to_list(vec), readably, "[", "]", " ");
+}
+
+char* pr_str_hashmap(hashmap map, int readably) {
+
+  return pr_str_sequential(hashmap_to_list(map), readably, "{", "}", " ");
+}
 
 char* escape_string(char* str) {
 
-  long buffer_length = 2*(strlen(str) + 1) ; /* allocate a reasonable initial buffer size */
+  /* allocate a reasonable initial buffer size */
+  long buffer_length = 2*(strlen(str) + 1);
   char* buffer = GC_MALLOC(sizeof(*buffer) * buffer_length);
 
   strcpy(buffer,"\"");

@@ -1,7 +1,7 @@
 #ifndef _MAL_ENV_H
 #define _MAL_ENV_H
 
-#include "libs/linked_list/linked_list.h"
+//#include "libs/list/list.h"
 #include "libs/hashmap/hashmap.h"
 #include "types.h"
 

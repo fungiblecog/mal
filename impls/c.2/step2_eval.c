@@ -79,7 +79,8 @@ int main(int argc, char** argv) {
   MalType* func_mul = make_function(&mal_mul);
   MalType* func_div = make_function(&mal_div);
 
-  hashmap g = hashmap_make("+", func_add);
+  hashmap g = hashmap_make();
+  g = hashmap_put(g, "+", func_add);
   g = hashmap_put(g, "-", func_sub);
   g = hashmap_put(g, "*", func_mul);
   g = hashmap_put(g, "/", func_div);
@@ -116,8 +117,8 @@ MalType* eval_ast(MalType* ast, Env* env) {
 
   /* forward references */
   list evaluate_list(list lst, Env* env);
-  list evaluate_vector(list lst, Env* env);
-  list evaluate_hashmap(list lst, Env* env);
+  vector evaluate_vector(vector vec, Env* env);
+  hashmap evaluate_hashmap(hashmap map, Env* env);
 
   if (is_symbol(ast)) {
 
@@ -131,72 +132,65 @@ MalType* eval_ast(MalType* ast, Env* env) {
   }
   else if (is_list(ast)) {
 
-    list result = evaluate_list(ast->value.mal_list, env);
+    list lst = ast->value.mal_list;
+    list evlst = NULL;
 
-    if (!result || !is_error(result->data)) {
-      return make_list(result);
-    } else {
-      return result->data;
+    while (lst) {
+
+      MalType* result = EVAL(lst->data, env);
+
+      if (is_error(result)) {
+        return result;
+      }
+
+      evlst = list_cons(evlst, result);
+      lst = lst->next;
     }
+    return make_list(list_reverse(evlst));
   }
   else if (is_vector(ast)) {
 
-    list result = evaluate_vector(ast->value.mal_list, env);
+    list lst = vector_to_list(ast->value.mal_vector);
+    vector evec = vector_make();
 
-    if (!result || !is_error(result->data)) {
-      return make_vector(result);
-    } else {
-      return result->data;
+    while (lst) {
+
+      MalType* result = EVAL(lst->data, env);
+
+      if (is_error(result)) {
+        return result;
+      }
+
+      evec = vector_push(evec, result);
+      lst = lst->next;
     }
+
+    return make_vector(evec);
   }
   else if (is_hashmap(ast)) {
 
-    list result = evaluate_hashmap(ast->value.mal_list, env);
+    list lst = hashmap_to_list(ast->value.mal_hashmap);
+    hashmap emap = hashmap_make();
 
-    if (!result || !is_error(result->data)) {
-      return make_hashmap(result);
-    } else {
-      return result->data;
+    while (lst) {
+
+      /* keys are unevaluated */
+      MalType* key = lst->data;
+      /* values are evaluated */
+      MalType* val = EVAL(lst->next->data, env);
+
+      if (is_error(val)) {
+        return val;
+      }
+
+      emap = hashmap_put(emap, key, val);
+      lst = lst->next->next;
     }
+    return make_hashmap(emap);
   }
   else {
     return ast;
   }
-}
-
-list evaluate_list(list lst, Env* env) {
-
-  list evlst = NULL;
-  while (lst) {
-    evlst = list_push(evlst, EVAL(lst->data, env));
-    lst = lst->next;
-  }
-  return list_reverse(evlst);
-}
-
-list evaluate_vector(list lst, Env* env) {
-  /* TODO: implement a real vector */
-  list evlst = NULL;
-  while (lst) {
-    evlst = list_push(evlst, EVAL(lst->data, env));
-    lst = lst->next;
-  }
-  return list_reverse(evlst);
-}
-
-list evaluate_hashmap(list lst, Env* env) {
-  /* TODO: implement a real hashmap */
-  list evlst = NULL;
-  while (lst) {
-
-    /* keys are unevaluated */
-    evlst = list_push(evlst, lst->data);
-    lst = lst->next;
-    /* values are evaluated */
-    evlst = list_push(evlst, EVAL(lst->data, env));
-    lst = lst->next;
-  }
-  return list_reverse(evlst);
 }
 
 MalType* mal_add(list args) {

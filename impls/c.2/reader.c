@@ -448,9 +448,9 @@ MalType* read_form(Reader* reader) {
 
           /* push the symbol and the following forms onto a list */
           list lst = NULL;
-          lst = list_push(lst, symbol);
-          lst = list_push(lst, second_form);
-          lst = list_push(lst, first_form);
+          lst = list_cons(lst, symbol);
+          lst = list_cons(lst, second_form);
+          lst = list_cons(lst, first_form);
           lst = list_reverse(lst);
 
           return make_list(lst);
@@ -471,72 +471,88 @@ MalType* read_form(Reader* reader) {
 
 MalType* read_list(Reader* reader) {
 
-  MalType* retval = read_matched_delimiters(reader, '(', ')' );
-
-  if (is_error(retval)) {
-    retval = make_error("Reader error: unbalanced parenthesis '()'");
-  }
-  else {
-    retval->type = MALTYPE_LIST;
-  }
-  return retval;
-}
-
-MalType* read_vector(Reader* reader) {
-
-  MalType* retval = read_matched_delimiters(reader, '[', ']' );
-
-  if (is_error(retval)) {
-    retval = make_error("Reader error: unbalanced brackets '[]'");
-  }
-  else {
-    retval->type = MALTYPE_VECTOR;
-  }
-  return retval;
-}
-
-MalType* read_hashmap(Reader* reader) {
-
-  MalType* retval = read_matched_delimiters(reader, '{', '}' );
-
-  if (is_error(retval)) {
-    retval = make_error("Reader error: unbalanced braces '{}'");
-  }
-  else if (list_count(retval->value.mal_list)%2 != 0) {
-    retval = make_error("Reader error: missing value in map literal");
-  }
-  else {
-    retval->type = MALTYPE_HASHMAP;
-  }
-  return retval;
-}
-
-MalType* read_matched_delimiters(Reader* reader, char start_delimiter, char end_delimiter) {
-/* TODO: separate implementation of hashmap and vector */
-
   Token* tok = reader_next(reader);
   list lst = NULL;
 
-  if (reader_peek(reader)->data[0] == end_delimiter) {
+  if (reader_peek(reader)->data[0] == ')') {
     reader_next(reader);
     return make_list(NULL);
   }
   else {
-    while (tok->data[0] != end_delimiter) {
+    while (tok->data[0] != ')') {
 
         MalType* val = read_form(reader);
-        lst = list_push(lst, (gptr)val);
+        lst = list_cons(lst, (gptr)val);
 
         tok = reader_peek(reader);
 
         if (!tok) {
-          /* unbalanced parentheses */
-          return make_error("");
+          return make_error("Reader error: unbalanced parentheses '()'");
         }
       }
     reader_next(reader);
 
-    return  make_list(list_reverse(lst));
+    return make_list(list_reverse(lst));
+  }
+}
+
+MalType* read_vector(Reader* reader) {
+
+  Token* tok = reader_next(reader);
+  vector vec = vector_make();
+
+  if (reader_peek(reader)->data[0] == ']') {
+    reader_next(reader);
+    return make_vector(vec);
+  }
+  else {
+    while (tok->data[0] != ']') {
+
+      MalType* val = read_form(reader);
+      vec = vector_push(vec, (gptr)val);
+
+      tok = reader_peek(reader);
+
+      if (!tok) {
+
+        return make_error("Reader error: unbalanced brackets '[]'");
+      }
+    }
+    reader_next(reader);
+    return make_vector(vec);
+  }
+}
+
+MalType* read_hashmap(Reader* reader) {
+
+  Token* tok = reader_next(reader);
+  hashmap map = hashmap_make();
+
+  if (reader_peek(reader)->data[0] == '}') {
+    reader_next(reader);
+    return make_hashmap(hashmap_make());
+  }
+  else {
+    while (tok->data[0] != '}') {
+
+      MalType* key = read_form(reader);
+      MalType* val = NULL;
+
+      tok = reader_peek(reader);
+      if (!tok) {
+        return make_error("Reader error: unbalanced braces '{}'");
+      }
+
+      val = read_form(reader);
+      map = hashmap_put(map, (gptr)key, (gptr)val);
+
+      tok = reader_peek(reader);
+      if (!tok) {
+        return make_error("Reader error: unbalanced braces '{}'");
+      }
+    }
+    reader_next(reader);
+    return make_hashmap(map);
   }
 }
 
@@ -595,8 +611,8 @@ MalType* make_symbol_list(Reader* reader, char* symbol_name) {
   list lst = NULL;
 
   /* push the symbol and the following form onto the list */
-  lst = list_push(lst, make_symbol(symbol_name));
-  lst = list_push(lst, read_form(reader));
+  lst = list_cons(lst, make_symbol(symbol_name));
+  lst = list_cons(lst, read_form(reader));
 
   return make_list(list_reverse(lst));
 }

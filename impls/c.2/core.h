@@ -12,7 +12,7 @@ struct ns_s {
 
 };
 
-ns* ns_make_core();
+ns* ns_make_core(void);
 MalType* as_str(list args, int readably, char* separator);
 MalType* print(list args, int readably, char* separator);
 char* get_fn(gptr data);

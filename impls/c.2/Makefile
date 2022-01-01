@@ -9,17 +9,20 @@ SRC = reader.c printer.c types.c env.c core.c
 HEADERS = reader.h printer.h types.h env.h core.h
 
 LIB_DIR = ./libs
-LIB_LIST_H = $(LIB_DIR)/linked_list/linked_list.h
-LIB_LIST_SRC = $(LIB_DIR)/linked_list/linked_list.c
+LIB_LIST_H = $(LIB_DIR)/list/list.h
+LIB_LIST_SRC = $(LIB_DIR)/list/list.c
 
 LIB_MAP_H = $(LIB_DIR)/hashmap/hashmap.h
 LIB_MAP_SRC = $(LIB_DIR)/hashmap/hashmap.c
 
-LIBS_H = $(LIB_LIST_H) $(LIB_MAP_H)
-LIBS_SRC = $(LIB_LIST_SRC) $(LIB_MAP_SRC)
+LIB_VEC_H = $(LIB_DIR)/vector/vector.h
+LIB_VEC_SRC = $(LIB_DIR)/vector/vector.c
+
+LIBS_H = $(LIB_LIST_H) $(LIB_MAP_H) $(LIB_VEC_H)
+LIBS_SRC = $(LIB_LIST_SRC) $(LIB_MAP_SRC) $(LIB_VEC_SRC)
 
 S0_SRC = step0_repl.c
-S1_SRC = step1_read_print.c reader.c types.c printer.c $(LIB_LIST_SRC)
+S1_SRC = step1_read_print.c reader.c types.c printer.c $(LIBS_SRC)
 S2_SRC = step2_eval.c reader.c types.c printer.c $(LIBS_SRC)
 S3_SRC = step3_env.c reader.c types.c printer.c env.c $(LIBS_SRC)
 S4_SRC = step4_if_fn_do.c $(SRC) $(LIBS_SRC)

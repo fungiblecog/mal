@@ -125,9 +125,9 @@ int main(int argc, char** argv) {
 MalType* eval_ast(MalType* ast, Env* env) {
 
   /* forward references */
-  list evaluate_list(list lst, Env* env);
-  list evaluate_vector(list lst, Env* env);
-  list evaluate_hashmap(list lst, Env* env);
+  MalType *evaluate_list(list lst, Env* env);
+  MalType *evaluate_vector(vector vec, Env* env);
+  MalType * evaluate_hashmap(hashmap map, Env* env);
 
   if (is_symbol(ast)) {
 
@@ -141,33 +141,15 @@ MalType* eval_ast(MalType* ast, Env* env) {
   }
   else if (is_list(ast)) {
 
-    list result = evaluate_list(ast->value.mal_list, env);
-
-    if (!result || !is_error(result->data)) {
-      return make_list(result);
-    } else {
-      return result->data;
-    }
+    return evaluate_list(ast->value.mal_list, env);
   }
   else if (is_vector(ast)) {
 
-    list result = evaluate_vector(ast->value.mal_list, env);
-
-    if (!result || !is_error(result->data)) {
-      return make_vector(result);
-    } else {
-      return result->data;
-    }
+    return evaluate_vector(ast->value.mal_vector, env);
   }
   else if (is_hashmap(ast)) {
 
-    list result = evaluate_hashmap(ast->value.mal_list, env);
-
-    if (!result || !is_error(result->data)) {
-      return make_hashmap(result);
-    } else {
-      return result->data;
-    }
+    return evaluate_hashmap(ast->value.mal_hashmap, env);
   }
   else {
     return ast;
@@ -195,11 +177,19 @@ MalType* eval_letstar(MalType* ast, Env* env) {
   list lst = ast->value.mal_list;
   lst = lst->next;
 
-  /* TODO: Check the bindings list is valid, has an even number of elements, etc*/
+  /* TODO: Check the bindings list is valid, has an even number of elements, etc */
   Env* letstar_env = env_make(env, NULL, NULL, NULL);
 
   MalType* letstar_bindings = lst->data;
-  list letstar_bindings_list = letstar_bindings->value.mal_list;
+  list letstar_bindings_list = NULL;
+
+  /* bindings can be a list or vector */
+  if (is_vector(letstar_bindings)) {
+    letstar_bindings_list = vector_to_list(letstar_bindings->value.mal_vector);
+  }
+  else {
+    letstar_bindings_list = letstar_bindings->value.mal_list;
+  }
 
   /* evaluate the bindings */
   while(letstar_bindings_list) {
@@ -216,39 +206,44 @@ MalType* eval_letstar(MalType* ast, Env* env) {
   return EVAL(forms, letstar_env);
 }
 
-list evaluate_list(list lst, Env* env) {
+MalType *evaluate_list(list lst, Env* env) {
 
   list evlst = NULL;
   while (lst) {
-    evlst = list_push(evlst, EVAL(lst->data, env));
+    evlst = list_cons(evlst, EVAL(lst->data, env));
     lst = lst->next;
   }
-  return list_reverse(evlst);
+  return make_list(list_reverse(evlst));
 }
 
-list evaluate_vector(list lst, Env* env) {
-  /* TODO: implement a real vector */
-  list evlst = NULL;
+MalType *evaluate_vector(vector vec, Env* env) {
+
+  list lst = vector_to_list(vec);
+  vector evec = vector_make();
+
   while (lst) {
-    evlst = list_push(evlst, EVAL(lst->data, env));
+    evec = vector_push(evec, EVAL(lst->data, env));
     lst = lst->next;
   }
-  return list_reverse(evlst);
+  return make_vector(evec);
 }
 
-list evaluate_hashmap(list lst, Env* env) {
-  /* TODO: implement a real hashmap */
-  list evlst = NULL;
+MalType *evaluate_hashmap(hashmap map, Env* env) {
+
+  list lst = hashmap_to_list(map);
+  hashmap emap = hashmap_make();
+
   while (lst) {
 
     /* keys are unevaluated */
-    evlst = list_push(evlst, lst->data);
-    lst = lst->next;
+    MalType* key = lst->data;
     /* values are evaluated */
-    evlst = list_push(evlst, EVAL(lst->data, env));
-    lst = lst->next;
+    MalType* val = EVAL(lst->next->data, env);
+
+    emap = hashmap_put(emap, key, val);
+    lst = lst->next->next;
   }
-  return list_reverse(evlst);
+  return make_hashmap(emap);
 }
 
 MalType* mal_add(list args) {
