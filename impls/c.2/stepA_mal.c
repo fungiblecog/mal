@@ -227,16 +227,17 @@ int main(int argc, char** argv) {
   global_env = repl_env;
 
   ns* core = ns_make_core();
-  list lst = hashmap_to_list(core->mappings);
+  iterator iter = hashmap_iterator_make(core->mappings);
 
-  while (lst) {
-    char* symbol = lst->data;
-    MalType*(*function)(list) = (MalType*(*)(list))lst->next->data;
+  while (iter) {
+    char* symbol = iter->value;
+
+    iter = iterator_next(iter);
+    MalType*(*function)(list) = (MalType*(*)(list))iter->value;
 
     env_set_C_fn(repl_env, symbol, function);
 
-    /* pop symbol and function from the list */
-    lst = lst->next->next;
+    iter = iterator_next(iter);
   }
 
   env_set_C_fn(repl_env, "eval", mal_eval);
@@ -248,7 +249,7 @@ int main(int argc, char** argv) {
   EVAL(READ("(defmacro! cond (fn* (& xs) (if (> (count xs) 0) (list 'if (first xs) (if (> (count xs) 1) (nth xs 1) (throw \"odd number of forms to cond\")) (cons 'cond (rest (rest xs)))))))"), repl_env);
 
   /* make command line arguments available in the environment */
-  lst = NULL;
+  list lst = NULL;
   for (long i = 2; i < argc; i++) {
     lst = list_cons(lst, make_string(argv[i]));
   }

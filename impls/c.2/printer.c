@@ -139,8 +139,8 @@ char* pr_str(MalType* val, int readably) {
   }
 }
 
-
-char* pr_str_sequential(list lst, int readably, char* start_delimiter, char* end_delimiter, char* separator) {
+char* pr_str_sequential(iterator iter, int readably, char* start_delimiter, \
+                        char* end_delimiter, char* separator) {
 
   char* list_buffer = GC_MALLOC(sizeof(*list_buffer) * LIST_BUFFER_SIZE);
   long buffer_length = LIST_BUFFER_SIZE;
@@ -151,10 +151,10 @@ char* pr_str_sequential(list lst, int readably, char* start_delimiter, char* end
   long len = strlen(start_delimiter);
   long count = len;
 
-  while (lst) {
+  while (iter) {
 
     /* concatenate next element */
-    MalType* data = lst->data;
+    MalType* data = iter->value;
     char* str = pr_str(data, readably);
 
     len = strlen(str);
@@ -166,9 +166,9 @@ char* pr_str_sequential(list lst, int readably, char* start_delimiter, char* end
     }
 
     strncat(list_buffer, str, len);
-    lst = lst->next;
+    iter = iterator_next(iter);
 
-    if (lst) {
+    if (iter) {
       len = strlen(separator);
       count += len;
 
@@ -197,17 +197,17 @@ char* pr_str_sequential(list lst, int readably, char* start_delimiter, char* end
 
 char* pr_str_list(list lst, int readably) {
 
-  return pr_str_sequential(lst, readably, "(", ")", " ");
+  return pr_str_sequential(list_iterator_make(lst), readably, "(", ")", " ");
 }
 
 char* pr_str_vector(vector vec, int readably) {
 
-  return pr_str_sequential(vector_to_list(vec), readably, "[", "]", " ");
+  return pr_str_sequential(vector_iterator_make(vec), readably, "[", "]", " ");
 }
 
 char* pr_str_hashmap(hashmap map, int readably) {
 
-  return pr_str_sequential(hashmap_to_list(map), readably, "{", "}", " ");
+  return pr_str_sequential(hashmap_iterator_make(map), readably, "{", "}", " ");
 }
 
 char* escape_string(char* str) {

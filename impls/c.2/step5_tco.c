@@ -145,16 +145,17 @@ int main(int argc, char** argv) {
   Env* repl_env = env_make(NULL, NULL, NULL, NULL);
 
   ns* core = ns_make_core();
-  list lst = hashmap_to_list(core->mappings);
+  iterator iter = hashmap_iterator_make(core->mappings);
 
-  while (lst) {
-    char* symbol = lst->data;
-    MalType*(*function)(list) = (MalType*(*)(list))lst->next->data;
+  while (iter) {
+    char* symbol = iter->value;
+
+    iter = iterator_next(iter);
+    MalType*(*function)(list) = (MalType*(*)(list))iter->value;
 
     env_set_C_fn(repl_env, symbol, function);
 
-    /* pop symbol and function from the list */
-    lst = lst->next->next;
+    iter = iterator_next(iter);
   }
 
   /* add not function */

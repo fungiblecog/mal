@@ -74,7 +74,8 @@ MalType* make_error(char* msg);
 MalType* make_error_fmt(char* fmt, ...);
 MalType* wrap_error(MalType* value);
 MalType* make_function(MalType*(*fn)(list args));
-MalType* make_closure(Env* env, MalType* parameters, MalType* definition, MalType* more_symbol);
+MalType* make_closure(Env* env, MalType* parameters, MalType* definition, \
+                      MalType* more_symbol);
 MalType* copy_type(MalType* value);
 
 int is_sequential(MalType* val);

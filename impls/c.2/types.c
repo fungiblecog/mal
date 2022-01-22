@@ -281,26 +281,19 @@ MalType* copy_type(MalType* value) {
   return new_val;
 }
 
-/* conversions */
+/* conversions use iterator interface */
 list vector_to_list(vector vec) {
 
   if(vec->count == 0) { return NULL; }
 
   list lst = NULL;
-  for (int i = 0; i< vec->count; i++) {
-    lst = list_cons(lst, vec->data[i]);
+  iterator iter = vector_iterator_make(vec);
+
+  while (iter) {
+    lst = list_cons(lst, iterator_value(iter));
+    iter = iterator_next(iter);
   }
   return list_reverse(lst);
-}
-
-vector list_to_vector(list lst) {
-
-  vector vec = vector_make();
-
-  while(lst) {
-    vec = vector_push(vec, lst->data);
-  }
-  return vec;
 }
 
 list hashmap_to_list(hashmap map) {
@@ -308,12 +301,29 @@ list hashmap_to_list(hashmap map) {
   if(map->count == 0) { return NULL; }
 
   list lst = NULL;
-  entry pair = map->head;
+  iterator iter = hashmap_iterator_make(map);
 
-  while(pair) {
-    lst = list_cons(lst, pair->key);
-    lst = list_cons(lst, pair->val);
-    pair = pair->next;
+  while(iter) {
+    /* key */
+    lst = list_cons(lst, iterator_value(iter));
+    iter = iterator_next(iter);
+    /* value */
+    lst = list_cons(lst, iterator_value(iter));
+    iter = iterator_next(iter);
   }
   return list_reverse(lst);
+}
+
+vector list_to_vector(list lst) {
+
+  if(!lst) { return vector_make(); }
+
+  vector vec = vector_make();
+  iterator iter = list_iterator_make(lst);
+
+  while (iter) {
+    vec = vector_push(vec, iterator_value(iter));
+    iter = iterator_next(iter);
+  }
+  return vec;
 }

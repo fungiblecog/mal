@@ -30,8 +30,12 @@ hashmap hashmap_make(void);
 hashmap hashmap_put(hashmap map, gptr key, gptr val);
 gptr hashmap_get(hashmap map, char* keystring);
 gptr hashmap_getf(hashmap map, gptr key, char_fn fn);
+int hashmap_empty(hashmap map);
+hashmap hashmap_delete(hashmap map, char* keystring);
+hashmap hashmap_deletef(hashmap map, gptr key, char_fn fn);
 hashmap hashmap_updatef(hashmap map, gptr key, gptr val, char_fn fn);
 hashmap hashmap_copy(hashmap map);
 int hashmap_count(hashmap map);
 iterator hashmap_iterator_make(hashmap map);
+
 #endif

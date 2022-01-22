@@ -214,6 +214,26 @@ void test_hashmap_copy(void) {
   }
 }
 
+void test_hashmap_delete(void) {
+
+  hashmap map = hashmap_make();
+
+  for (int i = 0; i < TEST_ITERATIONS; i++) {
+
+    char* key = make_test_key(i);
+    char* val = make_test_val(i);
+    map = hashmap_put(map, (gptr)key, (gptr)val);
+  }
+
+  char* key_random = make_test_key(TEST_ITERATIONS/2);
+  map = hashmap_delete(map, key_random);
+
+  /* key no longer found */
+  TEST_ASSERT_NULL(hashmap_get(map, key_random));
+  TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS - 1, hashmap_count(map));
+}
+
+
 void test_hashmap_iterator(void) {
 
   hashmap map = hashmap_make();
@@ -258,6 +278,8 @@ int main(void)
   RUN_TEST(test_hashmap_put);
   RUN_TEST(test_hashmap_get);
   RUN_TEST(test_hashmap_getf);
+  RUN_TEST(test_hashmap_delete);
+  //  RUN_TEST(test_hashmap_deletef);
   RUN_TEST(test_hashmap_updatef);
   RUN_TEST(test_hashmap_copy);
   RUN_TEST(test_hashmap_iterator);

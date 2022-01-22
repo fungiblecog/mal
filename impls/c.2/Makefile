@@ -18,8 +18,11 @@ LIB_MAP_SRC = $(LIB_DIR)/hashmap/hashmap.c
 LIB_VEC_H = $(LIB_DIR)/vector/vector.h
 LIB_VEC_SRC = $(LIB_DIR)/vector/vector.c
 
-LIBS_H = $(LIB_LIST_H) $(LIB_MAP_H) $(LIB_VEC_H)
-LIBS_SRC = $(LIB_LIST_SRC) $(LIB_MAP_SRC) $(LIB_VEC_SRC)
+LIB_ITER_H = $(LIB_DIR)/iterator/iterator.h
+LIB_ITER_SRC = $(LIB_DIR)/iterator/iterator.c
+
+LIBS_H = $(LIB_LIST_H) $(LIB_MAP_H) $(LIB_VEC_H) $(LIB_ITER_H)
+LIBS_SRC = $(LIB_LIST_SRC) $(LIB_MAP_SRC) $(LIB_VEC_SRC) $(LIB_ITER_SRC)
 
 S0_SRC = step0_repl.c
 S1_SRC = step1_read_print.c reader.c types.c printer.c $(LIBS_SRC)

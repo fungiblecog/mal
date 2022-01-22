@@ -59,11 +59,14 @@ gptr hashmap_getf(hashmap map, gptr key, char_fn fn) {
   assert(map != NULL);
 
   entry pair = map->head;
+
+  /* apply fn to the key to get a string */
+  char* keystring = fn(key);
+
   /* walk the internal list */
   while(pair) {
 
-    /* apply fn to the keys to get strings */
-    char* keystring = fn(key);
+    /* apply fn to the item to get a string */
     char* item = fn(pair->key);
 
     if (strcmp(keystring, item) == 0) {
@@ -84,11 +87,13 @@ hashmap hashmap_updatef(hashmap map, gptr key, gptr val, char_fn fn) {
 
   entry pair = map->head;
 
+  /* apply fn to the key to get a string */
+  char* keystring = fn(key);
+
   /* walk the internal list */
   while(pair) {
 
-    /* apply fn to the keys to get strings */
-    char* keystring = fn(key);
+    /* apply fn to the item to get a string */
     char* item = fn(pair->key);
 
     if (strcmp(keystring, item) == 0) {
@@ -147,6 +152,62 @@ int hashmap_count(hashmap map) {
   return map->count;
 }
 
+int hashmap_empty(hashmap map) {
+  assert(map != NULL);
+  return (map->count == 0);
+}
+
+hashmap hashmap_delete(hashmap map, char* keystring) {
+  assert(map != NULL);
+
+  hashmap new_map = hashmap_make();
+  entry pair = map->head;
+
+  /* walk the internal list */
+  while (pair) {
+
+    if (strcmp(keystring, (char*)pair->key) == 0) {
+      /* find a matching key - skip to next */
+      pair = pair->next;
+    }
+    else {
+      /* add to new hashmap */
+      new_map = hashmap_put(new_map, pair->key, pair->val);
+      pair = pair->next;
+    }
+  }
+  return new_map;
+}
+
+hashmap hashmap_deletef(hashmap map, gptr key, char_fn fn) {
+  assert(map != NULL);
+
+  hashmap new_map = hashmap_make();
+
+  /* apply fn to the key to get a string */
+  char* keystring = fn(key);
+
+  entry pair = map->head;
+  /* walk the internal list */
+  while (pair) {
+
+    /* apply fn to the keys to get strings */
+    char* item = fn(pair->key);
+
+    if (strcmp(keystring, item) == 0) {
+      /* find a matching key - skip to next */
+      pair = pair->next;
+    }
+    else {
+      /* add to new hashmap */
+      new_map = hashmap_put(new_map, pair->key, pair->val);
+      pair = pair->next;
+    }
+  }
+  return new_map;
+}
+
+
 static iterator hashmap_next_fn(iterator iter) {
   assert(iter != NULL);
 
@@ -181,6 +242,9 @@ static iterator hashmap_next_fn(iterator iter) {
 
 iterator hashmap_iterator_make(hashmap map) {
   assert(map != NULL);
+
+  /* empty hashmap returns a NULL iterator */
+  if (hashmap_empty(map)) { return NULL; }
 
   /* create an iterator */
   iterator iter = GC_MALLOC(sizeof(*iter));
