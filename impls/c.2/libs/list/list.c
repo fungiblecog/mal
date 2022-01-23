@@ -185,13 +185,15 @@ static iterator list_next_fn(iterator iter) {
   /* check for end of the list */
   if (!current) { return NULL; }
 
+  iterator new_iter = iterator_copy(iter);
+
   /* set the next pair */
-  iter->current = current;
+  new_iter->current = current;
 
   /* set the next value */
-  iter->value = current->data;
+  new_iter->value = current->data;
 
-  return iter;
+  return new_iter;
 }
 
 

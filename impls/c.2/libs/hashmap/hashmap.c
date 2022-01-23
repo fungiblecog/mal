@@ -214,6 +214,8 @@ static iterator hashmap_next_fn(iterator iter) {
   /* iter->current points to a hashmap entry */
   entry current = iter->current;
 
+  iterator new_iter = iterator_copy(iter);
+
   /* if we're looking for a key, advance the next pointer */
   if (iter->data == 0) {
     current = current->next;
@@ -222,22 +224,22 @@ static iterator hashmap_next_fn(iterator iter) {
     if (!current) { return NULL; }
 
     /* get the next key */
-    iter->current = current;
-    iter->value = current->key;
+    new_iter->current = current;
+    new_iter->value = current->key;
 
     /* next item is a val */
-    iter->data = (gptr)1;
+    new_iter->data = (gptr)1;
   }
   /* if we're looking for a value no need to advance the pointer */
   else {
     /* return the current val */
-    iter->value = current->val;
+    new_iter->value = current->val;
 
     /* next item is a key */
-    iter->data = (gptr)0;
+    new_iter->data = (gptr)0;
   }
 
-  return iter;
+  return new_iter;
 }
 
 iterator hashmap_iterator_make(hashmap map) {

@@ -125,14 +125,16 @@ static iterator vector_next_fn(iterator iter) {
 
   if (curr == iter->data) { return NULL; }
 
+  iterator new_iter = iterator_copy(iter);
+
   /* increment the current pointer */
-  iter->current = curr;
+  new_iter->current = curr;
 
   /* set the next value */
   char* val = *(char**)curr;
-  iter->value = val;
+  new_iter->value = val;
 
-  return iter;
+  return new_iter;
 }
 
 iterator vector_iterator_make(vector vec)

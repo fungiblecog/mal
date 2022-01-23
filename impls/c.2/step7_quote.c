@@ -505,9 +505,7 @@ MalType* quasiquote(MalType* ast) {
 
   /* argument to quasiquote is self-evaluating: (quasiquote val)
      => val */
-  if (is_self_evaluating(ast)) {
-    return ast;
-  }
+  if (is_self_evaluating(ast)) { return ast; }
 
   /* argument to quasiquote is a vector: (quasiquote [first rest]) */
   else if (is_vector(ast)) {
@@ -533,13 +531,11 @@ MalType* quasiquote_vector(MalType* ast) {
   /* forward references */
   MalType* quasiquote_list(MalType* ast);
 
-  list args = vector_to_list(ast->value.mal_vector);
+  vector vec = ast->value.mal_vector;
+  if (!vector_empty(vec)) {
 
-  if (args) {
-
-    MalType* first = args->data;
-
-    /* if first element is unquote return quoted */
+    MalType* first = vector_get(vec, 0);
+    /* if first element is unquote return the vector quoted */
     if (is_symbol(first) && strcmp(first->value.mal_symbol, SYMBOL_UNQUOTE) == 0) {
 
       list lst = list_make(ast);
@@ -549,37 +545,25 @@ MalType* quasiquote_vector(MalType* ast) {
     }
   }
 
-  /* otherwise process like a list and convert back to a vector */
-  list lst = list_make(make_symbol("vec"));
+  /* otherwise process like a list and then convert back to a vector */
+  list lst = vector_to_list(ast->value.mal_vector);
+  MalType* val = quasiquote_list(make_list(lst));
 
-  MalType* result = quasiquote_list(ast);
+  if (is_error(val)) { return val; }
 
-  if (is_error(result)) {
-    return result;
-  } else {
-    lst = list_cons(lst, result);
-  }
+  list result = list_make(make_symbol("vec"));
+  result = list_reverse(list_cons(result, val));
 
-  lst = list_reverse(lst);
-  return make_list(lst);
+  return make_list(result);
 }
 
 MalType* quasiquote_list(MalType* ast) {
 
-  list args = NULL;
-  /* handle vectors as lists */
-  if (is_vector(ast)) {
-    args = vector_to_list(ast->value.mal_vector);
-   }
-  else {
-    args = ast->value.mal_list;
-  }
+  list args = ast->value.mal_list;
 
   /* handle empty list: (quasiquote ())
      => () */
-  if (!args) {
-    return make_list(NULL);
-  }
+  if (!args) { return make_list(NULL); }
 
   MalType* first = args->data;
 

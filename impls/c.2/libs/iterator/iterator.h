@@ -33,5 +33,6 @@ struct iterator_s {
 /* public iterator interface */
 iterator iterator_next(iterator iter);
 gptr iterator_value(iterator iter);
+iterator iterator_copy(iterator iter);
 
 #endif
