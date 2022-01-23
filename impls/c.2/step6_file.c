@@ -292,27 +292,33 @@ void eval_letstar(MalType** ast, Env** env) {
     return;
   }
 
-  list bindings_list = NULL;
+  iterator bindings_iter = NULL;
+
   /* bindings can be a list or vector */
   if (is_vector(bindings)) {
-    bindings_list = vector_to_list(bindings->value.mal_vector);
+
+    if (vector_count(bindings->value.mal_vector) % 2 == 1) {
+      *ast = make_error("'let*': expected an even number of binding pairs");
+      return;
+    }
+    bindings_iter = vector_iterator_make(bindings->value.mal_vector);
   }
   else {
-    bindings_list = bindings->value.mal_list;
-  }
-
-  if (list_count(bindings_list) % 2 == 1) {
-    *ast = make_error("'let*': expected an even number of binding pairs");
-    return;
+    if (list_count(bindings->value.mal_list) % 2 == 1) {
+      *ast = make_error("'let*': expected an even number of binding pairs");
+      return;
+    }
+    bindings_iter = list_iterator_make(bindings->value.mal_list);
   }
 
   Env* letstar_env = env_make(*env, NULL, NULL, NULL);
 
   /* evaluate the bindings */
-  while(bindings_list) {
+  while (bindings_iter) {
 
-    MalType* symbol = bindings_list->data;
-    MalType* value = EVAL(bindings_list->next->data, letstar_env);
+    MalType* symbol = bindings_iter->value;
+    bindings_iter = iterator_next(bindings_iter);
+    MalType* value = EVAL(bindings_iter->value, letstar_env);
 
     /* early return from error */
     if (is_error(value)) {
@@ -321,7 +327,7 @@ void eval_letstar(MalType** ast, Env** env) {
     }
 
     env_set(letstar_env, symbol, value);
-    bindings_list = bindings_list->next->next;
+    bindings_iter = iterator_next(bindings_iter);
   }
 
   *env = letstar_env;
@@ -446,41 +452,38 @@ MalType *evaluate_list(list lst, Env* env) {
 
 MalType *evaluate_vector(vector vec, Env* env) {
 
-  list lst = vector_to_list(vec);
+  iterator iter = vector_iterator_make(vec);
   vector evec = vector_make();
 
-  while (lst) {
+  while (iter) {
 
-    MalType* val = EVAL(lst->data, env);
+    MalType* val = EVAL(iter->value, env);
 
-    if (is_error(val)) {
-      return val;
-    }
+    if (is_error(val)) { return val; }
 
     evec = vector_push(evec, val);
-    lst = lst->next;
+    iter = iterator_next(iter);
   }
   return make_vector(evec);
 }
 
 MalType *evaluate_hashmap(hashmap map, Env* env) {
 
-  list lst = hashmap_to_list(map);
+  iterator iter = hashmap_iterator_make(map);
   hashmap emap = hashmap_make();
 
-  while (lst) {
+  while (iter) {
 
     /* keys are unevaluated */
-    MalType* key = lst->data;
+    MalType* key = iter->value;
     /* values are evaluated */
-    MalType* val = EVAL(lst->next->data, env);
+    iter = iterator_next(iter);
+    MalType* val = EVAL(iter->value, env);
 
-    if (is_error(val)) {
-      return val;
-    }
+    if (is_error(val)) { return val; }
 
     emap = hashmap_put(emap, key, val);
-    lst = lst->next->next;
+    iter = iterator_next(iter);
   }
   return make_hashmap(emap);
 }

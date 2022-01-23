@@ -150,41 +150,43 @@ MalType* eval_ast(MalType* ast, Env* env) {
   }
   else if (is_vector(ast)) {
 
-    list lst = vector_to_list(ast->value.mal_vector);
+    iterator iter = vector_iterator_make(ast->value.mal_vector);
     vector evec = vector_make();
 
-    while (lst) {
+    while (iter) {
 
-      MalType* result = EVAL(lst->data, env);
+      MalType* result = EVAL(iter->value, env);
 
       if (is_error(result)) {
         return result;
       }
 
       evec = vector_push(evec, result);
-      lst = lst->next;
+      iter = iterator_next(iter);
     }
-
     return make_vector(evec);
   }
   else if (is_hashmap(ast)) {
 
-    list lst = hashmap_to_list(ast->value.mal_hashmap);
+    iterator iter = hashmap_iterator_make(ast->value.mal_hashmap);
     hashmap emap = hashmap_make();
 
-    while (lst) {
+    while (iter) {
 
       /* keys are unevaluated */
-      MalType* key = lst->data;
+      MalType* key = iter->value;
+
+      iter = iterator_next(iter);
+
       /* values are evaluated */
-      MalType* val = EVAL(lst->next->data, env);
+      MalType* val = EVAL(iter->value, env);
 
       if (is_error(val)) {
         return val;
       }
 
       emap = hashmap_put(emap, key, val);
-      lst = lst->next->next;
+      iter = iterator_next(iter);
     }
     return make_hashmap(emap);
   }

@@ -181,24 +181,26 @@ MalType* eval_letstar(MalType* ast, Env* env) {
   Env* letstar_env = env_make(env, NULL, NULL, NULL);
 
   MalType* letstar_bindings = lst->data;
-  list letstar_bindings_list = NULL;
+  iterator letstar_bindings_iter = NULL;
 
   /* bindings can be a list or vector */
   if (is_vector(letstar_bindings)) {
-    letstar_bindings_list = vector_to_list(letstar_bindings->value.mal_vector);
+    letstar_bindings_iter = vector_iterator_make(letstar_bindings->value.mal_vector);
   }
   else {
-    letstar_bindings_list = letstar_bindings->value.mal_list;
+    letstar_bindings_iter = list_iterator_make(letstar_bindings->value.mal_list);
   }
 
   /* evaluate the bindings */
-  while(letstar_bindings_list) {
+  while (letstar_bindings_iter) {
 
-    MalType* symbol = letstar_bindings_list->data;
-    MalType* value = letstar_bindings_list->next->data;
+    MalType* symbol = letstar_bindings_iter->value;
+    letstar_bindings_iter = iterator_next(letstar_bindings_iter);
+
+    MalType* value = letstar_bindings_iter->value;
     letstar_env = env_set(letstar_env, symbol, EVAL(value, letstar_env));
 
-    letstar_bindings_list = letstar_bindings_list->next->next; /* pop symbol and value*/
+    letstar_bindings_iter = iterator_next(letstar_bindings_iter);
   }
 
   /* evaluate the forms in the presence of bindings */
@@ -218,30 +220,32 @@ MalType *evaluate_list(list lst, Env* env) {
 
 MalType *evaluate_vector(vector vec, Env* env) {
 
-  list lst = vector_to_list(vec);
+  iterator iter = vector_iterator_make(vec);
   vector evec = vector_make();
 
-  while (lst) {
-    evec = vector_push(evec, EVAL(lst->data, env));
-    lst = lst->next;
+  while (iter) {
+    evec = vector_push(evec, EVAL(iter->value, env));
+    iter = iterator_next(iter);
   }
   return make_vector(evec);
 }
 
 MalType *evaluate_hashmap(hashmap map, Env* env) {
 
-  list lst = hashmap_to_list(map);
+  iterator iter = hashmap_iterator_make(map);
   hashmap emap = hashmap_make();
 
-  while (lst) {
+  while (iter) {
 
     /* keys are unevaluated */
-    MalType* key = lst->data;
+    MalType* key = iter->value;
+    iter = iterator_next(iter);
+
     /* values are evaluated */
-    MalType* val = EVAL(lst->next->data, env);
+    MalType* val = EVAL(iter->value, env);
 
     emap = hashmap_put(emap, key, val);
-    lst = lst->next->next;
+    iter = iterator_next(iter);
   }
   return make_hashmap(emap);
 }
