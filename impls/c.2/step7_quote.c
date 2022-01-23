@@ -478,22 +478,23 @@ MalType* eval_quasiquote(MalType* ast) {
   /* forward reference */
   MalType* quasiquote(MalType* ast);
 
-  list lst = NULL;
+  iterator iter = NULL;
   if (is_vector(ast)) {
-    lst = vector_to_list(ast->value.mal_vector);
+    iter = vector_iterator_make(ast->value.mal_vector);
   }
   else {
-    lst = ast->value.mal_list;
+    iter = list_iterator_make(ast->value.mal_list);
   }
 
   /* no arguments (quasiquote) */
-  if (!lst->next) { return make_nil(); }
+  iter = iterator_next(iter);
+  if (!iter) { return make_nil(); }
 
   /* too many arguments */
-  else if (lst->next->next) {
+  if (iterator_next(iter)) {
     return make_error("'quasiquote': expected exactly one argument");
   }
-  return quasiquote(lst->next->data);
+  return quasiquote(iter->value);
 }
 
 MalType* quasiquote(MalType* ast) {
