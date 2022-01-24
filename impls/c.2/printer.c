@@ -236,20 +236,28 @@ char* snprintfbuf(long initial_size, char* fmt, ...) {
   /* this is just a wrapper for the *printf family that ensures the
      string is long enough to hold the contents */
 
-  va_list argptr;
-  va_start(argptr, fmt);
+  /* needed for variadic function */
+  va_list argptr, argptr_copy;
 
-  char* buffer = GC_MALLOC(sizeof(*buffer) * initial_size);
-  long n = vsnprintf(buffer, initial_size, fmt, argptr);
+  /* last fixed argument is fmt */
+  va_start(argptr, fmt);
+  /* make a copy of the va_list to reuse later if need to allocate more space */
+  va_copy(argptr_copy, argptr);
+
+   /* allocate an initial buffer plus a char for the /0 */
+  char* buffer = GC_MALLOC(sizeof(*buffer) * initial_size + 1);
+
+  /* the return value from vsnprintf is the number of chars that actually need to be allocated
+   which could be less than were provided in the buffer */
+  long n = vsnprintf(buffer, initial_size, fmt, argptr) + 1;
   va_end(argptr);
 
+  /* if there wasn't enough space reallocate the buffer and try again */
   if (n > initial_size) {
-    va_start(argptr, fmt);
 
     buffer = GC_REALLOC(buffer, sizeof(*buffer) * n);
-    vsnprintf(buffer, n, fmt, argptr);
-
-    va_end(argptr);
+    vsnprintf(buffer, n, fmt, argptr_copy);
+    va_end(argptr_copy);
   }
   return buffer;
 }
