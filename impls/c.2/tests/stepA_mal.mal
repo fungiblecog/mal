@@ -20,3 +20,66 @@
 ;=>8.000000
 (. "libm.so.6" "double" "pow" "double" 3.0 "double" 2.0)
 ;=>9.000000
+
+;; Testing macros
+(defmacro! and (fn* (&xs) (if (empty? xs) false (if (empty? (rest xs)) `(if ~(first xs) ~(first xs) false) `(if ~(first xs) (and ~@(rest xs)) false)))))
+(defmacro! or (fn* (&xs) (if (empty? xs) true (if (empty? (rest xs)) `(if ~(first xs) ~(first xs) false) `(if ~(first xs) ~(first xs) (or ~@(rest xs)))))))
+
+(and)
+;=>false
+(and 1)
+;=>1
+(and 1 2 3)
+;=>3
+(and 1 2 3 nil)
+;=>false
+(and 1 2 3 false)
+;=>false
+
+(or)
+;=>true
+(or 1)
+;=>1
+(or 1 2)
+;=>1
+(or 1 2 3)
+;=>1
+(or nil nil 3)
+;=>3
+(and nil nil nil)
+;=>false
+(or false false false)
+;=>false
+
+;; macro-defining macro
+(defmacro! defmac! (fn* (&xs) (let* [name (first xs) params (first (rest xs)) body (rest (rest xs))] `(defmacro! ~name (fn* ~params ~@body)))))
+
+;; use macro-defining macro to define and/or
+(defmac! and (&xs) (if (empty? xs) false (if (empty? (rest xs)) `(if ~(first xs) ~(first xs) false) `(if ~(first xs) (and ~@(rest xs)) false))))
+(defmac! or (&xs) (if (empty? xs) true (if (empty? (rest xs)) `(if ~(first xs) ~(first xs) false) `(if ~(first xs) ~(first xs) (or ~@(rest xs))))))
+
+(and)
+;=>false
+(and 1)
+;=>1
+(and 1 2 3)
+;=>3
+(and 1 2 3 nil)
+;=>false
+(and 1 2 3 false)
+;=>false
+
+(or)
+;=>true
+(or 1)
+;=>1
+(or 1 2)
+;=>1
+(or 1 2 3)
+;=>1
+(or nil nil 3)
+;=>3
+(and nil nil nil)
+;=>false
+(or false false false)
+;=>false

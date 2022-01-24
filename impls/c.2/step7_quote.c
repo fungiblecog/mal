@@ -546,8 +546,7 @@ MalType* quasiquote_vector(MalType* ast) {
   }
 
   /* otherwise process like a list and then convert back to a vector */
-  list lst = vector_to_list(ast->value.mal_vector);
-  MalType* val = quasiquote_list(make_list(lst));
+  MalType* val = quasiquote_list(make_list(vector_to_list(ast->value.mal_vector)));
 
   if (is_error(val)) { return val; }
 

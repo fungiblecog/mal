@@ -1250,16 +1250,31 @@ MalType* mal_vec(list args) {
     return make_error("'vec': expected a vector, list or hashmap");
   }
 
-  MalType* new_val = copy_type(coll);
-  new_val->type = MALTYPE_VECTOR;
-
   if (is_list(coll)) {
-    new_val->value.mal_vector = list_to_vector(coll->value.mal_list);
+
+    iterator iter = list_iterator_make(coll->value.mal_list);
+    vector vec = vector_make();
+
+    while (iter) {
+      vec = vector_push(vec, iter->value);
+      iter = iterator_next(iter);
+    }
+    return make_vector(vec);
   }
   else if (is_hashmap(coll)) {
-    new_val->value.mal_vector = list_to_vector(hashmap_to_list(coll->value.mal_hashmap));;
+
+    iterator iter = hashmap_iterator_make(coll->value.mal_hashmap);
+    vector vec = vector_make();
+
+    while (iter) {
+      vec = vector_push(vec, iter->value);
+      iter = iterator_next(iter);
+    }
+    return make_vector(vec);
+
+  } else { /* is_vector(coll) */
+    return coll;
   }
-  return new_val;
 }
 
 MalType* mal_vector(list args) {

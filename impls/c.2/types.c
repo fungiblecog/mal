@@ -295,35 +295,3 @@ list vector_to_list(vector vec) {
   }
   return list_reverse(lst);
 }
-
-list hashmap_to_list(hashmap map) {
-
-  if(map->count == 0) { return NULL; }
-
-  list lst = NULL;
-  iterator iter = hashmap_iterator_make(map);
-
-  while(iter) {
-    /* key */
-    lst = list_cons(lst, iterator_value(iter));
-    iter = iterator_next(iter);
-    /* value */
-    lst = list_cons(lst, iterator_value(iter));
-    iter = iterator_next(iter);
-  }
-  return list_reverse(lst);
-}
-
-vector list_to_vector(list lst) {
-
-  if(!lst) { return vector_make(); }
-
-  vector vec = vector_make();
-  iterator iter = list_iterator_make(lst);
-
-  while (iter) {
-    vec = vector_push(vec, iterator_value(iter));
-    iter = iterator_next(iter);
-  }
-  return vec;
-}

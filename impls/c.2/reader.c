@@ -156,7 +156,7 @@ Reader* tokenize(char* token_string) {
     case ',':
     case 0x0A: /* newline */
       next++;
-      token = NULL; /* no token for whitespace */
+      /* no token for whitespace */
       break;
 
       /* single character token */

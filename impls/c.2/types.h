@@ -101,7 +101,5 @@ int is_macro(MalType* val);
 
 /* conversions */
 list vector_to_list(vector vec);
-list hashmap_to_list(hashmap lst);
-vector list_to_vector(list lst);
 
 #endif
