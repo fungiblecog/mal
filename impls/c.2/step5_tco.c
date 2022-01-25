@@ -459,9 +459,6 @@ MalType *evaluate_hashmap(hashmap map, Env* env) {
 
 MalType* regularise_parameters(list* args, MalType** more_symbol) {
 
-  /* forward reference */
-  char* symbol_fn(gptr data);
-
   list regular_args = NULL;
   while (*args) {
 
@@ -508,7 +505,7 @@ MalType* regularise_parameters(list* args, MalType** more_symbol) {
     /* & is not found - add the symbol to the regular argument list */
     else {
 
-      if (list_findf(regular_args, val->value.mal_symbol, symbol_fn) > 0) {
+      if (list_find(regular_args, val->value.mal_symbol, cmp_chars) > 0) {
         return make_error_fmt("duplicate symbol in argument list: '%s'", \
                               pr_str(val, UNREADABLY));
       }
@@ -521,11 +518,6 @@ MalType* regularise_parameters(list* args, MalType** more_symbol) {
 
   *args = list_reverse(regular_args);
   return make_nil();
-}
-
-char* symbol_fn(gptr data) {
-  MalType* val = data;
-  return (val->value.mal_symbol);
 }
 
 /* silence the compiler after swap!, apply, and map

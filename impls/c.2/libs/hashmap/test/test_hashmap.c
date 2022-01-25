@@ -28,12 +28,8 @@ char *make_test_key(int i) {
   return buf;
 }
 
-int char_fn(gptr key1, gptr key2) {
-
-  char* keystring1 = (char*)key1;
-  char* keystring2 = (char*)key2;
-
-  return (strcmp(keystring1, keystring2) == 0);
+int cmp_chars(gptr key1, gptr key2) {
+  return (strcmp((char*)key1, (char*)key2) == 0);
 }
 
 char* char_val(gptr data) {
@@ -52,7 +48,7 @@ void tearDown(void) {
 void test_hashmap_make(void)
 {
   /* create a hashmap */
-  hashmap map = hashmap_make(char_fn);
+  hashmap map = hashmap_make(cmp_chars);
 
   /* no elements */
   TEST_ASSERT_EQUAL_INT(0, map->count);
@@ -62,7 +58,7 @@ void test_hashmap_make(void)
 
 void test_hashmap_put(void)
 {
-  hashmap map = hashmap_make(char_fn);
+  hashmap map = hashmap_make(cmp_chars);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -93,7 +89,7 @@ void test_hashmap_get(void)
 {
   srand((int)time(NULL));
 
-  hashmap map = hashmap_make(char_fn);
+  hashmap map = hashmap_make(cmp_chars);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -117,7 +113,7 @@ void test_hashmap_update(void)
 {
   srand((int)time(NULL));
 
-  hashmap map = hashmap_make(char_fn);
+  hashmap map = hashmap_make(cmp_chars);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -162,7 +158,7 @@ void test_hashmap_update(void)
 
 void test_hashmap_copy(void) {
 
-  hashmap map = hashmap_make(char_fn);
+  hashmap map = hashmap_make(cmp_chars);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -190,7 +186,7 @@ void test_hashmap_copy(void) {
 
 void test_hashmap_delete(void) {
 
-  hashmap map = hashmap_make(char_fn);
+  hashmap map = hashmap_make(cmp_chars);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -207,10 +203,9 @@ void test_hashmap_delete(void) {
   TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS - 1, hashmap_count(map));
 }
 
-
 void test_hashmap_iterator(void) {
 
-  hashmap map = hashmap_make(char_fn);
+  hashmap map = hashmap_make(cmp_chars);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 

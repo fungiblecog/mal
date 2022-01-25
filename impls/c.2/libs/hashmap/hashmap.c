@@ -4,14 +4,6 @@
 #include <assert.h>
 #include "hashmap.h"
 
-int cmp_chars(gptr key1, gptr key2) {
-
-  char* keystring1 = (char*)key1;
-  char* keystring2 = (char*)key2;
-
-  return (strcmp(keystring1, keystring2) == 0);
-}
-
 hashmap hashmap_make(compare_fn cmp_fn) {
 
   hashmap map = GC_MALLOC(sizeof(*map));

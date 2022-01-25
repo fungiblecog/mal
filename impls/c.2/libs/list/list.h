@@ -7,31 +7,31 @@
 typedef void* gptr;
 
 /* a function pointer that converts a gptr to a char* */
-typedef char*(*char_fn)(gptr);
+typedef int (*cmp_fn)(gptr, gptr);
+
+/* typedef for structs */
+typedef struct pair_s pair;
+typedef pair* list;
 
 /* linked list is constructed of pairs */
-typedef struct pair_s {
+struct pair_s {
   gptr data;
-  struct pair_s* next;
-} pair;
+  pair* next;
+};
 
-/* a list is just a pointer to the pair at the head of the list */
-typedef pair *list;
-
-/* an empty list is NULL */
+/* Note: an empty list is NULL */
 
 /* interface */
-list list_make(gptr data_ptr);
+list list_make(gptr val);
+int list_count(list lst);
 int list_empty(list lst);
-list list_cons(list lst, gptr data_ptr);
+list list_cons(list lst, gptr val);
+gptr list_nth(list lst, int n);
 gptr list_first(list lst);
 list list_rest(list lst);
-int list_count(list lst);
-gptr list_nth(list lst, int n);
 list list_reverse(list lst); /* note: destructive */
 list list_copy(list lst);
 list list_concatenate(list lst1, list lst2);
-int list_findf(list lst, char* keystring, char_fn fn);
+int list_find(list lst, gptr key, cmp_fn fn);
 iterator list_iterator_make(list lst);
-
 #endif

@@ -15,10 +15,10 @@ int list_empty(list lst) {
 }
 
 /* return a list with an element added at the head */
-list list_cons(list lst, gptr data_ptr) {
+list list_cons(list lst, gptr val) {
 
   pair* head = GC_malloc(sizeof(pair));
-  head->data = data_ptr;
+  head->data = val;
   head->next = lst;
 
   return head;
@@ -144,22 +144,18 @@ list list_concatenate(list lst_1, list lst_2) {
 }
 /* return the position of the element matching
    keystring when fn is applied to the data */
-int list_findf(list lst, char* keystring, char_fn fn) {
+//int list_findf(list lst, char* keystring, char_fn fn) {
+int list_find(list lst, gptr val, cmp_fn fn) {
 
   /* handle empty cases */
-  if (!lst) { return -1; }
-  if (!keystring) { return -1; }
+  if (!lst || !val) { return -1; }
 
   list current = lst;
-
-  /* walk the list */
   long ctr = 0;
-  while(current) {
+  /* walk the list */
+  while (current) {
 
-    /* apply fn to the data to get a string */
-    char* item = fn(current->data);
-
-    if (strcmp(keystring, item) == 0) {
+    if (fn(val, current->data)) {
       /* return the 0-indexed position of the first match */
       return ctr;
     }

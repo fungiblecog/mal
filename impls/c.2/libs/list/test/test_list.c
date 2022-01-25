@@ -1,3 +1,4 @@
+#include <string.h>
 #include "../../unity/src/unity.h"
 #include "../list.h"
 #include "gc.h"
@@ -21,9 +22,8 @@ char *make_test_str(int i) {
   return buf;
 }
 
-/* utility function */
-char* char_val(gptr data) {
-  return (char*)data;
+int cmp_chars(gptr key1, gptr key2) {
+  return (strcmp((char*)key1, (char*)key2) == 0);
 }
 
 void setUp(void) {
@@ -291,7 +291,7 @@ void test_list_concatenate(void)
   TEST_ASSERT_NULL(list_concatenate(NULL, NULL));
 }
 
-void test_list_findf(void)
+void test_list_find(void)
 {
   srand((int)time(NULL));
 
@@ -307,15 +307,15 @@ void test_list_findf(void)
     int r = (rand() % TEST_ITERATIONS);
     char* val = make_test_str(TEST_ITERATIONS - 1 - r);
 
-    int result = list_findf(lst, val, char_val);
+    int result = list_find(lst, val, cmp_chars);
     /* check present values are found in the right position */
     TEST_ASSERT_EQUAL_INT(r, result);
   }
 
   /* item not found returns -1 */
-  TEST_ASSERT_EQUAL_INT(-1, list_findf(lst, "NOT PRESENT", char_val));
+  TEST_ASSERT_EQUAL_INT(-1, list_find(lst, "NOT PRESENT", cmp_chars));
   /* null item returns -1 */
-  TEST_ASSERT_EQUAL_INT(-1, list_findf(lst, NULL, char_val));
+  TEST_ASSERT_EQUAL_INT(-1, list_find(lst, NULL, cmp_chars));
 }
 
 void test_list_iterator(void) {
@@ -362,7 +362,7 @@ int main(void)
   RUN_TEST(test_list_reverse);
   RUN_TEST(test_list_copy);
   RUN_TEST(test_list_concatenate);
-  RUN_TEST(test_list_findf);
+  RUN_TEST(test_list_find);
   RUN_TEST(test_list_iterator);
 
   return UNITY_END();

@@ -282,29 +282,34 @@ MalType* copy_type(MalType* value) {
   return new_val;
 }
 
+/* comparison function for char* */
+int cmp_chars(gptr val1, gptr val2) {
+  return (strcmp((char*)val1, (char*)val2) == 0);
+}
+
 /* comparison function for MALTYPES */
-int cmp_maltypes(gptr data1, gptr data2) {
+int cmp_maltypes(gptr val1, gptr val2) {
 
-  MalType* val1 = data1;
-  MalType* val2 = data2;
+  MalType* mal_1 = val1;
+  MalType* mal_2 = val2;
 
-  if (val1->type != val2->type) { return 0; }
+  if (mal_1->type != mal_2->type) { return 0; }
 
-  switch (val1->type) {
+  switch (mal_1->type) {
 
   case MALTYPE_STRING:
 
-    return (strcmp(val1->value.mal_string, val2->value.mal_string) == 0);
+    return (strcmp(mal_1->value.mal_string, mal_2->value.mal_string) == 0);
     break;
 
   case MALTYPE_SYMBOL:
 
-    return (strcmp(val1->value.mal_symbol, val2->value.mal_symbol) == 0);
+    return (strcmp(mal_1->value.mal_symbol, mal_2->value.mal_symbol) == 0);
     break;
 
   case MALTYPE_KEYWORD:
 
-    return (strcmp(val1->value.mal_keyword, val2->value.mal_keyword) == 0);
+    return (strcmp(mal_1->value.mal_keyword, mal_2->value.mal_keyword) == 0);
     break;
 
   default:

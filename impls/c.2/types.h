@@ -58,7 +58,8 @@ struct MalClosure_s {
 
 };
 
-int cmp_maltypes(gptr data1, gptr data2);
+int cmp_chars(gptr val1, gptr val2);
+int cmp_maltypes(gptr val1, gptr val2);
 list vector_to_list(vector vec);
 
 MalType* make_symbol(char* value);
