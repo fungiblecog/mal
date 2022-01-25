@@ -50,7 +50,7 @@ gptr hashmap_get(hashmap map, gptr key) {
   entry pair = map->head;
 
   /* walk the internal list */
-  while(pair) {
+  while (pair) {
 
     if (map->cmp_fn(key, pair->key)) {
       /* find a matching key */
@@ -65,18 +65,19 @@ gptr hashmap_get(hashmap map, gptr key) {
   return NULL;
 }
 
-//TODO: make non-destructive */
 hashmap hashmap_update(hashmap map, gptr key, gptr val) {
+  assert(map != NULL);
 
-  entry pair = map->head;
+  hashmap new_map = hashmap_copy(map);
+  entry pair = new_map->head;
 
   /* walk the internal list */
-  while(pair) {
+  while (pair) {
 
-    if (map->cmp_fn(key, pair->key)) {
+    if (new_map->cmp_fn(key, pair->key)) {
       /* update the data */
       pair->val = val;
-      return map;
+      return new_map;
     }
     else {
       /* move to the next item */
@@ -84,7 +85,7 @@ hashmap hashmap_update(hashmap map, gptr key, gptr val) {
     }
   }
   /* if key doesn't exist already add new key/value pair */
-  return hashmap_put(map, key, val);
+  return hashmap_put(new_map, key, val);
 }
 
 hashmap hashmap_copy(hashmap map) {
@@ -97,7 +98,7 @@ hashmap hashmap_copy(hashmap map) {
   entry pair = map->head;
 
   /* walk the internal list */
-  while(pair) {
+  while (pair) {
     copy = hashmap_put(copy, (gptr)pair->key, (gptr)pair->val);
     pair = pair->next;
   }
@@ -107,7 +108,7 @@ hashmap hashmap_copy(hashmap map) {
   /* reverse the list of keys/values */
   entry prev = NULL, next = NULL, current = copy->head;
 
-  while(current) {
+  while (current) {
 
     /* stash current value of next pointer --> */
     next = current->next;
@@ -186,7 +187,6 @@ static iterator hashmap_next_fn(iterator iter) {
     /* next item is a key */
     new_iter->data = (gptr)0;
   }
-
   return new_iter;
 }
 
@@ -216,7 +216,6 @@ iterator hashmap_iterator_make(hashmap map) {
   else {
     iter->value = curr->key;
   }
-
   /* use data as a flag that indicates next key (0) or val (1) */
   iter->data = (gptr)1;
 
