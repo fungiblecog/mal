@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 #include <gc.h>
 #include "types.h"
 
@@ -281,7 +282,37 @@ MalType* copy_type(MalType* value) {
   return new_val;
 }
 
-/* conversions use iterator interface */
+/* comparison function for MALTYPES */
+int cmp_maltypes(gptr data1, gptr data2) {
+
+  MalType* val1 = data1;
+  MalType* val2 = data2;
+
+  if (val1->type != val2->type) { return 0; }
+
+  switch (val1->type) {
+
+  case MALTYPE_STRING:
+
+    return (strcmp(val1->value.mal_string, val2->value.mal_string) == 0);
+    break;
+
+  case MALTYPE_SYMBOL:
+
+    return (strcmp(val1->value.mal_symbol, val2->value.mal_symbol) == 0);
+    break;
+
+  case MALTYPE_KEYWORD:
+
+    return (strcmp(val1->value.mal_keyword, val2->value.mal_keyword) == 0);
+    break;
+
+  default:
+    return 0;
+  }
+}
+
+/* conversion uses iterator interface */
 list vector_to_list(vector vec) {
 
   if(vec->count == 0) { return NULL; }

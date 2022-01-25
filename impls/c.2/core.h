@@ -10,6 +10,7 @@ struct ns_s {
   hashmap mappings;
 };
 
+int cmp_maltypes(gptr data1, gptr data2);
 ns* ns_make_core(void);
 
 #endif

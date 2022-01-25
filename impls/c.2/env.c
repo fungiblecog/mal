@@ -11,7 +11,7 @@ Env* env_make(Env* outer, list symbol_list, list exprs_list, MalType* more_symbo
 
   Env*  env = GC_MALLOC(sizeof(*env));
   env->outer = outer;
-  env->data = hashmap_make();
+  env->data = hashmap_make(cmp_chars);
 
   while (symbol_list) {
 

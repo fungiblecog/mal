@@ -1,3 +1,4 @@
+#include <string.h>
 #include "../../unity/src/unity.h"
 #include "../hashmap.h"
 #include "gc.h"
@@ -27,6 +28,14 @@ char *make_test_key(int i) {
   return buf;
 }
 
+int char_fn(gptr key1, gptr key2) {
+
+  char* keystring1 = (char*)key1;
+  char* keystring2 = (char*)key2;
+
+  return (strcmp(keystring1, keystring2) == 0);
+}
+
 char* char_val(gptr data) {
   return (char*)data;
 }
@@ -43,7 +52,7 @@ void tearDown(void) {
 void test_hashmap_make(void)
 {
   /* create a hashmap */
-  hashmap map = hashmap_make();
+  hashmap map = hashmap_make(char_fn);
 
   /* no elements */
   TEST_ASSERT_EQUAL_INT(0, map->count);
@@ -53,7 +62,7 @@ void test_hashmap_make(void)
 
 void test_hashmap_put(void)
 {
-  hashmap map = hashmap_make();
+  hashmap map = hashmap_make(char_fn);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -84,7 +93,7 @@ void test_hashmap_get(void)
 {
   srand((int)time(NULL));
 
-  hashmap map = hashmap_make();
+  hashmap map = hashmap_make(char_fn);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -104,46 +113,11 @@ void test_hashmap_get(void)
   }
 }
 
-void test_hashmap_getf(void)
+void test_hashmap_update(void)
 {
   srand((int)time(NULL));
 
-  hashmap map = hashmap_make();
-
-  for (int i = 0; i < TEST_ITERATIONS; i++) {
-
-    char* key = make_test_key(i);
-    char* val = make_test_val(i);
-    map = hashmap_put(map, (gptr)key, (gptr)val);
-  }
-
-  /* test that present values are found */
-  for (int i = 0; i < TEST_ITERATIONS; i++) {
-
-    int r = (rand() % TEST_ITERATIONS);
-    char* key = make_test_key(r);
-    char* val = make_test_val(r);
-
-    /* check val */
-    TEST_ASSERT_EQUAL_STRING(val, hashmap_getf(map, (gptr)key, char_val));
-  }
-
-  /* test that not present values are not found */
-  for (int i = 0; i < TEST_ITERATIONS; i++) {
-
-    int r = (rand() % TEST_ITERATIONS) + 10*TEST_ITERATIONS;
-    char* key = make_test_key(r);
-
-    /* check not present keys are not found */
-    TEST_ASSERT_NULL(hashmap_getf(map, (gptr)key, char_val));
-  }
-}
-
-void test_hashmap_updatef(void)
-{
-  srand((int)time(NULL));
-
-  hashmap map = hashmap_make();
+  hashmap map = hashmap_make(char_fn);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -161,7 +135,7 @@ void test_hashmap_updatef(void)
     char* key = make_test_key(r);
     char* val = "updated";
 
-    map = hashmap_updatef(map, (gptr)key, (gptr)val, char_val);
+    map = hashmap_update(map, (gptr)key, (gptr)val);
 
     /* test value is updated */
     TEST_ASSERT_EQUAL_STRING(val, hashmap_get(map, key));
@@ -176,7 +150,7 @@ void test_hashmap_updatef(void)
     char* key = make_test_key(i+2*TEST_ITERATIONS);
     char* val = make_test_val(i+2*TEST_ITERATIONS);
 
-    map = hashmap_updatef(map, (gptr)key, (gptr)val, char_val);
+    map = hashmap_update(map, (gptr)key, (gptr)val);
 
     /* check the value is updated */
     TEST_ASSERT_EQUAL_STRING(val, hashmap_get(map, key));
@@ -188,7 +162,7 @@ void test_hashmap_updatef(void)
 
 void test_hashmap_copy(void) {
 
-  hashmap map = hashmap_make();
+  hashmap map = hashmap_make(char_fn);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -216,7 +190,7 @@ void test_hashmap_copy(void) {
 
 void test_hashmap_delete(void) {
 
-  hashmap map = hashmap_make();
+  hashmap map = hashmap_make(char_fn);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -236,7 +210,7 @@ void test_hashmap_delete(void) {
 
 void test_hashmap_iterator(void) {
 
-  hashmap map = hashmap_make();
+  hashmap map = hashmap_make(char_fn);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -277,10 +251,8 @@ int main(void)
   RUN_TEST(test_hashmap_make);
   RUN_TEST(test_hashmap_put);
   RUN_TEST(test_hashmap_get);
-  RUN_TEST(test_hashmap_getf);
   RUN_TEST(test_hashmap_delete);
-  //  RUN_TEST(test_hashmap_deletef);
-  RUN_TEST(test_hashmap_updatef);
+  RUN_TEST(test_hashmap_update);
   RUN_TEST(test_hashmap_copy);
   RUN_TEST(test_hashmap_iterator);
 

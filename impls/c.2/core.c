@@ -23,7 +23,7 @@
 MalType* apply(MalType* fn, list args);
 MalType* as_str(list args, int readably, char* separator);
 MalType* print(list args, int readably, char* separator);
-char* get_fn(gptr data);
+//char* get_fn(gptr data);
 MalType* equal_seqs(MalType* seq1, MalType* seq2);
 MalType* equal_hashmaps(MalType* map1, MalType* map2);
 
@@ -106,7 +106,7 @@ ns* ns_make_core(void) {
 
   ns* core = GC_MALLOC(sizeof(*core));
 
-  hashmap core_functions = hashmap_make();
+  hashmap core_functions = hashmap_make(cmp_chars);
 
   /* arithmetic */
   core_functions = hashmap_put(core_functions, "+", mal_add);
@@ -1327,7 +1327,7 @@ MalType* mal_hash_map(list args) {
     return make_error("'hashmap': odd number of arguments, expected key/value pairs");
   }
 
-  hashmap map = hashmap_make();
+  hashmap map = hashmap_make(cmp_maltypes);
 
   while (args) {
 
@@ -1374,7 +1374,7 @@ MalType* mal_get(list args) {
 
   if (is_nil(map)) { return make_nil(); }
 
-  MalType* result =  hashmap_getf(map->value.mal_hashmap, args->next->data, get_fn);
+  MalType* result =  hashmap_get(map->value.mal_hashmap, args->next->data);
 
   if(result) {
     return result;
@@ -1395,7 +1395,7 @@ MalType* mal_contains_questionmark(list args) {
     return make_error("'contains?': expected a map for the first argument");
   }
 
-  MalType* result = hashmap_getf(map->value.mal_hashmap, args->next->data, get_fn);
+  MalType* result = hashmap_get(map->value.mal_hashmap, args->next->data);
 
   if (!result) {
     return make_false();
@@ -1426,7 +1426,7 @@ MalType* mal_assoc(list args) {
 
   while (args) {
 
-    result = hashmap_updatef(result, args->data, args->next->data, get_fn);
+    result = hashmap_update(result, args->data, args->next->data);
     args = args->next->next;
   }
   return make_hashmap(result);
@@ -1448,7 +1448,7 @@ MalType* mal_dissoc(list args) {
   args = args->next;
 
   while (args) {
-    map = hashmap_deletef(map, args->data, get_fn);
+    map = hashmap_delete(map, args->data);
     args = args->next;
   }
   return make_hashmap(map);
@@ -1826,7 +1826,7 @@ MalType* equal_hashmaps(MalType* map1, MalType* map2) {
     iter = iterator_next(iter);
     MalType* val1 = iter->value;
 
-    MalType* val2 = hashmap_getf(map, key, get_fn);
+    MalType* val2 = hashmap_get(map, key);
 
     /* key/value not found in second map */
     if (!val2) { return make_false(); }
@@ -1845,34 +1845,6 @@ MalType* equal_hashmaps(MalType* map1, MalType* map2) {
   }
   return make_true();
 }
-
-/* helper function for get */
-char* get_fn(gptr data) {
-
-  MalType* val = data;
-
-  switch (val->type) {
-
-  case MALTYPE_STRING:
-
-    return (val->value.mal_string);
-    break;
-
-  case MALTYPE_SYMBOL:
-
-    return (val->value.mal_symbol);
-    break;
-
-  case MALTYPE_KEYWORD:
-
-    return (val->value.mal_keyword);
-    break;
-
-  default:
-    return NULL;
-  }
-}
-
 
 #ifdef WITH_FFI
 MalType* mal_dot(list args) {

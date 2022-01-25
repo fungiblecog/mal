@@ -58,6 +58,9 @@ struct MalClosure_s {
 
 };
 
+int cmp_maltypes(gptr data1, gptr data2);
+list vector_to_list(vector vec);
+
 MalType* make_symbol(char* value);
 MalType* make_integer(long value);
 MalType* make_float(double value);
@@ -98,8 +101,5 @@ int is_callable(MalType* val);
 int is_function(MalType* val);
 int is_closure(MalType* val);
 int is_macro(MalType* val);
-
-/* conversions */
-list vector_to_list(vector vec);
 
 #endif

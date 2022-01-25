@@ -25,4 +25,5 @@ int vector_empty(vector vec);
 int vector_count(vector vec);
 vector vector_copy(vector vec);
 iterator vector_iterator_make(vector vec);
+
 #endif

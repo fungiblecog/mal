@@ -4,11 +4,20 @@
 #include <assert.h>
 #include "hashmap.h"
 
-hashmap hashmap_make() {
+int cmp_chars(gptr key1, gptr key2) {
+
+  char* keystring1 = (char*)key1;
+  char* keystring2 = (char*)key2;
+
+  return (strcmp(keystring1, keystring2) == 0);
+}
+
+hashmap hashmap_make(compare_fn cmp_fn) {
 
   hashmap map = GC_MALLOC(sizeof(*map));
   map->count = 0;
   map->head = NULL;
+  map->cmp_fn = cmp_fn;
 
   return map;
 }
@@ -28,21 +37,22 @@ hashmap hashmap_put(hashmap map, gptr key, gptr val) {
   pair->next = map->head;
 
   /* create new map */
-  hashmap new_map = hashmap_make();
+  hashmap new_map = hashmap_make(map->cmp_fn);
   new_map->count = map->count + 1;
   new_map->head = pair;
 
   return new_map;
 }
 
-gptr hashmap_get(hashmap map, char* keystring) {
+gptr hashmap_get(hashmap map, gptr key) {
   assert(map != NULL);
 
   entry pair = map->head;
+
   /* walk the internal list */
   while(pair) {
 
-    if (strcmp(keystring, (char*)pair->key) == 0) {
+    if (map->cmp_fn(key, pair->key)) {
       /* find a matching key */
       return pair->val;
     }
@@ -55,48 +65,15 @@ gptr hashmap_get(hashmap map, char* keystring) {
   return NULL;
 }
 
-gptr hashmap_getf(hashmap map, gptr key, char_fn fn) {
-  assert(map != NULL);
-
-  entry pair = map->head;
-
-  /* apply fn to the key to get a string */
-  char* keystring = fn(key);
-
-  /* walk the internal list */
-  while(pair) {
-
-    /* apply fn to the item to get a string */
-    char* item = fn(pair->key);
-
-    if (strcmp(keystring, item) == 0) {
-      /* found a matching key */
-      return pair->val;
-    }
-    else {
-      /* move to the next entry */
-      pair = pair->next;
-    }
-  }
-  /* not found */
-  return NULL;
-}
-
 //TODO: make non-destructive */
-hashmap hashmap_updatef(hashmap map, gptr key, gptr val, char_fn fn) {
+hashmap hashmap_update(hashmap map, gptr key, gptr val) {
 
   entry pair = map->head;
-
-  /* apply fn to the key to get a string */
-  char* keystring = fn(key);
 
   /* walk the internal list */
   while(pair) {
 
-    /* apply fn to the item to get a string */
-    char* item = fn(pair->key);
-
-    if (strcmp(keystring, item) == 0) {
+    if (map->cmp_fn(key, pair->key)) {
       /* update the data */
       pair->val = val;
       return map;
@@ -113,7 +90,7 @@ hashmap hashmap_updatef(hashmap map, gptr key, gptr val, char_fn fn) {
 hashmap hashmap_copy(hashmap map) {
   assert(map != NULL);
 
-  hashmap copy = hashmap_make();
+  hashmap copy = hashmap_make(map->cmp_fn);
 
   if (map->count == 0) { return copy; }
 
@@ -157,16 +134,16 @@ int hashmap_empty(hashmap map) {
   return (map->count == 0);
 }
 
-hashmap hashmap_delete(hashmap map, char* keystring) {
+hashmap hashmap_delete(hashmap map, gptr key) {
   assert(map != NULL);
 
-  hashmap new_map = hashmap_make();
+  hashmap new_map = hashmap_make(map->cmp_fn);
   entry pair = map->head;
 
   /* walk the internal list */
   while (pair) {
 
-    if (strcmp(keystring, (char*)pair->key) == 0) {
+    if (map->cmp_fn(key, pair->key)) {
       /* find a matching key - skip to next */
       pair = pair->next;
     }
@@ -178,35 +155,6 @@ hashmap hashmap_delete(hashmap map, char* keystring) {
   }
   return new_map;
 }
-
-hashmap hashmap_deletef(hashmap map, gptr key, char_fn fn) {
-  assert(map != NULL);
-
-  hashmap new_map = hashmap_make();
-
-  /* apply fn to the key to get a string */
-  char* keystring = fn(key);
-
-  entry pair = map->head;
-  /* walk the internal list */
-  while (pair) {
-
-    /* apply fn to the keys to get strings */
-    char* item = fn(pair->key);
-
-    if (strcmp(keystring, item) == 0) {
-      /* find a matching key - skip to next */
-      pair = pair->next;
-    }
-    else {
-      /* add to new hashmap */
-      new_map = hashmap_put(new_map, pair->key, pair->val);
-      pair = pair->next;
-    }
-  }
-  return new_map;
-}
-
 
 static iterator hashmap_next_fn(iterator iter) {
   assert(iter != NULL);

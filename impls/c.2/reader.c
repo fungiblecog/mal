@@ -526,11 +526,11 @@ MalType* read_vector(Reader* reader) {
 MalType* read_hashmap(Reader* reader) {
 
   Token* tok = reader_next(reader);
-  hashmap map = hashmap_make();
+  hashmap map = hashmap_make(cmp_chars);
 
   if (reader_peek(reader)->data[0] == '}') {
     reader_next(reader);
-    return make_hashmap(hashmap_make());
+    return make_hashmap(map);
   }
   else {
     while (tok->data[0] != '}') {

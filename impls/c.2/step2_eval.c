@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
   MalType* func_mul = make_function(&mal_mul);
   MalType* func_div = make_function(&mal_div);
 
-  hashmap g = hashmap_make();
+  hashmap g = hashmap_make(cmp_chars);
   g = hashmap_put(g, "+", func_add);
   g = hashmap_put(g, "-", func_sub);
   g = hashmap_put(g, "*", func_mul);
@@ -169,7 +169,7 @@ MalType* eval_ast(MalType* ast, Env* env) {
   else if (is_hashmap(ast)) {
 
     iterator iter = hashmap_iterator_make(ast->value.mal_hashmap);
-    hashmap emap = hashmap_make();
+    hashmap emap = hashmap_make(cmp_maltypes);
 
     while (iter) {
 
