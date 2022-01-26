@@ -23,7 +23,6 @@
 MalType* apply(MalType* fn, list args);
 MalType* as_str(list args, int readably, char* separator);
 MalType* print(list args, int readably, char* separator);
-//char* get_fn(gptr data);
 MalType* equal_seqs(MalType* seq1, MalType* seq2);
 MalType* equal_hashmaps(MalType* map1, MalType* map2);
 
@@ -207,7 +206,7 @@ MalType* mal_add(list args) {
   long i_sum = 0;
   double r_sum = 0.0;
 
-  while(args) {
+  while (args) {
 
     MalType* val = args->data;
     if (!is_number(val)) {
@@ -260,7 +259,7 @@ MalType* mal_sub(list args) {
       return_float = 1;
     }
 
-      while(args) {
+      while (args) {
 
       val = args->data;
 
@@ -291,7 +290,6 @@ MalType* mal_sub(list args) {
   }
 }
 
-
 MalType* mal_mul(list args) {
   /* Accepts any number of arguments */
 
@@ -300,7 +298,7 @@ MalType* mal_mul(list args) {
   long i_product = 1;
   double r_product = 1.0;
 
-  while(args) {
+  while (args) {
 
     MalType* val = args->data;
 
@@ -356,7 +354,7 @@ MalType* mal_div(list args) {
 
     args = args->next;
 
-    while(args) {
+    while (args) {
 
       val = args->data;
 
@@ -1060,7 +1058,7 @@ MalType* mal_apply(list args) {
   /* assemble loose arguments */
   args = args->next;
   list lst = NULL;
-  while(args->next) {
+  while (args->next) {
     lst = list_cons(lst, args->data);
     args = args->next;
   }
@@ -1109,7 +1107,7 @@ MalType* mal_map(list args) {
 
   list result_list = NULL;
 
-  while(arg_list) {
+  while (arg_list) {
 
     MalType* result = apply(func, list_make(arg_list->data));
 
@@ -1282,7 +1280,7 @@ MalType* mal_vector(list args) {
   /* Accepts any number and type of arguments */
   vector vec = vector_make();
 
-  while(args) {
+  while (args) {
     vec = vector_push(vec, args->data);
     args = args->next;
   }
@@ -1611,7 +1609,7 @@ MalType* mal_conj(list args) {
 
     vector vec = vector_copy(coll->value.mal_vector);
 
-    while(rest) {
+    while (rest) {
       vec = vector_push(vec, rest->data);
       rest = rest->next;
     }
@@ -1662,7 +1660,7 @@ MalType* mal_seq(list args) {
       char* str = coll->value.mal_string;
       list lst = NULL;
 
-      while(*str != '\0') {
+      while (*str != '\0') {
         char* new_str = GC_MALLOC(sizeof(*new_str));
         strncpy(new_str, str, 1);
 
@@ -1726,7 +1724,7 @@ MalType* as_str(list args, int readably, char* separator) {
   char* buffer = GC_MALLOC(sizeof(*buffer) * STRING_BUFFER_SIZE);
   long char_count = 0;
 
-  while(args) {
+  while (args) {
 
     MalType* arg = args->data;
     char* str = pr_str(arg, readably);
@@ -1750,7 +1748,7 @@ MalType* as_str(list args, int readably, char* separator) {
 
 MalType* print(list args, int readably, char* separator) {
 
-  while(args) {
+  while (args) {
 
     printf("%s", pr_str(args->data, readably));
     args = args->next;
@@ -1781,7 +1779,7 @@ MalType* equal_seqs(MalType* seq1, MalType* seq2) {
     second = list_iterator_make(seq2->value.mal_list);
   }
 
-  while(first && second) {
+  while (first && second) {
 
     list args = NULL;
     args = list_cons(args, second->value);
@@ -1883,7 +1881,7 @@ MalType* mal_dot(list args) {
   list arg_vals_list = NULL;
 
   args = args->next->next->next;
-  while(args) {
+  while (args) {
 
     MalType* val_type = (MalType*)args->data;
     MalType* val = (MalType*)args->next->data;

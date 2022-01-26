@@ -156,10 +156,12 @@ MalType* EVAL(MalType* ast, Env* env) {
     long arg_count = list_count(evlst->next);
 
     if (param_count > arg_count) {
-      return make_error("too few arguments supplied to function");
+      return make_error_fmt("too few arguments supplied to function: '%s'", \
+                            pr_str(func, UNREADABLY));
     }
     else if ((param_count < arg_count) && !closure->more_symbol) {
-      return make_error("too many arguments supplied to function");
+      return make_error_fmt("too many arguments supplied to function: '%s'", \
+                            pr_str(func, UNREADABLY));
     }
     else {
 
@@ -466,22 +468,19 @@ MalType* eval_fnstar(MalType* ast, Env* env) {
 
   MalType* params = lst->next->data;
 
-  list params_list;
+  list args = NULL;
   if (is_vector(params)) {
-    params_list = vector_to_list(params->value.mal_vector);
+    args = vector_to_list(params->value.mal_vector);
   } else {
-    params_list = params->value.mal_list;
+    args = params->value.mal_list;
   }
 
   MalType* more_symbol = NULL;
 
-  MalType* result = regularise_parameters(&params_list, &more_symbol);
+  MalType* result = regularise_parameters(&args, &more_symbol);
   if (is_error(result)) { return result; }
 
-  MalType* definition = lst->next->next->data;
-  MalType* regular_params = make_list(params_list);
-
-  return make_closure(env, regular_params, definition, more_symbol);
+  return make_closure(env, make_list(args), lst->next->next->data, more_symbol);
 }
 
 MalType* eval_do(MalType* ast, Env* env) {
@@ -738,10 +737,10 @@ MalType* macroexpand(MalType* ast, Env* env) {
     MalClosure* cls = macro_fn->value.mal_closure;
     MalType* more_symbol = cls->more_symbol;
 
-    list params_list = (cls->parameters)->value.mal_list;
+    list params = (cls->parameters)->value.mal_list;
     list args_list = lst->next;
 
-    env = env_make(cls->env, params_list, args_list, more_symbol);
+    env = env_make(cls->env, params, args_list, more_symbol);
     ast = EVAL(cls->definition, env);
   }
   return ast;

@@ -20,6 +20,8 @@
 
 #define PROMPT_STRING "user> "
 
+#define INITIAL_CMD_BUFFER 1024
+
 MalType* READ(char* str) {
 
   return read_str(str);
@@ -183,7 +185,7 @@ int main(int argc, char** argv) {
   if (argc > 1) {
 
     /* first argument on command line is filename */
-    char* load_command = snprintfbuf(1024, "(load-file \"%s\")", argv[1]);
+    char* load_command = snprintfbuf(INITIAL_CMD_BUFFER, "(load-file \"%s\")", argv[1]);
     EVAL(READ(load_command), repl_env);
   }
   /* run in repl mode when no cmd line args */
@@ -390,22 +392,19 @@ MalType* eval_fnstar(MalType* ast, Env* env) {
 
   MalType* params = lst->next->data;
 
-  list params_list;
+  list args = NULL;
   if (is_vector(params)) {
-    params_list = vector_to_list(params->value.mal_vector);
+    args = vector_to_list(params->value.mal_vector);
   } else {
-    params_list = params->value.mal_list;
+    args = params->value.mal_list;
   }
 
   MalType* more_symbol = NULL;
 
-  MalType* result = regularise_parameters(&params_list, &more_symbol);
+  MalType* result = regularise_parameters(&args, &more_symbol);
   if (is_error(result)) { return result; }
 
-  MalType* definition = lst->next->next->data;
-  MalType* regular_params = make_list(params_list);
-
-  return make_closure(env, regular_params, definition, more_symbol);
+  return make_closure(env, make_list(args), lst->next->next->data, more_symbol);
 }
 
 MalType* eval_do(MalType* ast, Env* env) {

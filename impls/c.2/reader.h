@@ -3,23 +3,22 @@
 
 #include "types.h"
 
-typedef struct Token_s {
+typedef struct Token_s Token;
+typedef struct Reader_s Reader;
 
+struct Token_s {
   int type;
   char* data;
   char* error;
+};
 
-} Token;
-
-typedef struct Reader_s {
-
+struct Reader_s {
   long position;      // current position in the array
   long token_count;   // number of tokens in the array
   long max_tokens;    // maximum number of tokens the array can hold
   Token** token_data; // pointer to an array of Tokens
   char* error;        // error message
-
-} Reader;
+};
 
 /* reader object */
 Reader* reader_make(long token_capacity);
@@ -52,5 +51,4 @@ MalType* read_matched_delimiters(Reader* reader, char start_delimiter, char end_
 MalType* make_symbol_list(Reader* reader, char* symbol_name);
 Token* token_allocate(char* str, long num_chars, int type, char* error);
 char* unescape_string(char* str, long length);
-
 #endif

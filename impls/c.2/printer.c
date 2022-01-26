@@ -15,6 +15,14 @@
 #define STRING_BUFFER_SIZE 256
 #define LIST_BUFFER_SIZE 1024
 
+/* forward references */
+char* pr_str_sequential(iterator iter, int readably, char* start_delimiter, \
+                        char* end_delimiter, char* separator);
+char* pr_str_list(list lst, int readably);
+char* pr_str_vector(vector vec, int readably);
+char* pr_str_hashmap(hashmap map, int readably);
+char* escape_string(char* str);
+
 char* pr_str(MalType* val, int readably) {
 
   if (!val) { return ""; }
@@ -268,7 +276,7 @@ char* snprintfbuf(long initial_size, char* fmt, ...) {
   /* make a copy of the va_list to reuse later if need to allocate more space */
   va_copy(argptr_copy, argptr);
 
-   /* allocate an initial buffer plus a char for the /0 */
+  /* allocate an initial buffer plus a char for the /0 */
   char* buffer = GC_MALLOC(sizeof(*buffer) * initial_size + 1);
 
   /* the return value from vsnprintf is the number of chars that actually need to be allocated

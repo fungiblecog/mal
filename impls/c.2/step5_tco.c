@@ -359,22 +359,19 @@ MalType* eval_fnstar(MalType* ast, Env* env) {
 
   MalType* params = lst->next->data;
 
-  list params_list;
+  list args = NULL;
   if (is_vector(params)) {
-    params_list = vector_to_list(params->value.mal_vector);
+    args = vector_to_list(params->value.mal_vector);
   } else {
-    params_list = params->value.mal_list;
+    args = params->value.mal_list;
   }
 
   MalType* more_symbol = NULL;
 
-  MalType* result = regularise_parameters(&params_list, &more_symbol);
+  MalType* result = regularise_parameters(&args, &more_symbol);
   if (is_error(result)) { return result; }
 
-  MalType* definition = lst->next->next->data;
-  MalType* regular_params = make_list(params_list);
-
-  return make_closure(env, regular_params, definition, more_symbol);
+  return make_closure(env, make_list(args), lst->next->next->data, more_symbol);
 }
 
 MalType* eval_do(MalType* ast, Env* env) {

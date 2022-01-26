@@ -158,7 +158,6 @@ Reader* tokenize(char* token_string) {
       next++;
       /* no token for whitespace */
       break;
-
       /* single character token */
     case '[':
     case '\\':
@@ -207,7 +206,6 @@ Reader* tokenize(char* token_string) {
     case '8':
     case '9':
       next = read_number_token(next, &token);
-      //      next = read_integer_token(next, &token);
       break;
 
       /* integer may be prefixed with +/- */
@@ -215,9 +213,9 @@ Reader* tokenize(char* token_string) {
     case '-':
       if (isdigit(next[1])) {
         next = read_number_token(next, &token);
-        //      next = read_integer_token(next, &token);
       }
-      else { /* if not digits it is part of a symbol */
+      /* if not digits it is part of a symbol */
+      else {
         next = read_symbol_token(next, &token);
       }
       break;
@@ -234,8 +232,7 @@ Reader* tokenize(char* token_string) {
     }
 
     if (!token) {
-      /* if no token was read (whitespace or comments)
-         continue the loop */
+      /* if no token was read (whitespace or comments) continue the loop */
       continue;
     }
     else {
@@ -335,7 +332,7 @@ char* read_string_token(char* current, Token** ptoken) {
 
   start = current + 1;
 
-  while(1) {
+  while (1) {
     end = strchr(start, '"'); /* find the next " character */
 
     /* handle failure to find closing quotes - implies end of input has been reached */
@@ -346,27 +343,33 @@ char* read_string_token(char* current, Token** ptoken) {
       error = "EOF reached with unterminated string";
       break;
     }
-    /* if the character preceding the " is a '\' character (escape), need to check if it is escaping the " and if it
-       is then keep searching from the next character */
+    /* if the character preceding the " is a '\' character (escape),
+       need to check if it is escaping the " and if it is then keep
+       searching from the next character */
     else if ( *(end - 1) == '\\') {
 
       char* back_ptr = end - 1;
       while (*back_ptr == '\\') {
-        back_ptr--; /* back up to count the escape characters '\' */
+        /* back up to count the escape characters '\' */
+        back_ptr--;
       }
 
       long escape_chars = (end - 1) - back_ptr;
 
-      if (escape_chars % 2 == 1) { /* odd number of '\' chars means " is not quoted */
-        start = end + 1; /* so keep searching */
-      } else {
+      /* odd number of '\' chars means " is not quoted */
+      if (escape_chars % 2 == 1) {
+        /* so keep searching */
+        start = end + 1;
         /* even number of '\' characters means we found the terminating quote mark */
-        token_length =  (end - current - 1); /* quotes are excluded from string token */
+      } else {
+        /* quotes are excluded from string token */
+        token_length =  (end - current - 1);
         break;
       }
     }
     else {
-      token_length =  (end - current - 1); /* quotes are excluded from string token */
+      /* quotes are excluded from string token */
+      token_length =  (end - current - 1);
       break;
     }
   }
@@ -388,7 +391,8 @@ char* read_comment_token(char* current, Token** ptoken) {
 
   *ptoken = token_allocate(current, token_chars, TOKEN_COMMENT, NULL);
 
-  return (current + token_chars + 1); /* next token starts with the char after the newline */
+  /* next token starts with the char after the newline */
+  return (current + token_chars + 1);
 }
 
 MalType* read_form(Reader* reader) {
@@ -460,11 +464,13 @@ MalType* read_form(Reader* reader) {
         return make_error_fmt("Reader error: Unknown special character '%c'", tok->data[0]);
       }
 
-    } else { /* Not a special character */
+    } else {
+      /* Not a special character */
       return read_atom(reader);
     }
   }
-  else { /* no tokens */
+  /* no tokens */
+  else {
     return NULL;
   }
 }
@@ -602,6 +608,7 @@ MalType* read_atom(Reader* reader) {
     return make_nil();
     break;
   }
+  /* shouldn't happen */
   return make_error("Reader error: Unknown atom type");
 }
 
@@ -619,10 +626,12 @@ MalType* make_symbol_list(Reader* reader, char* symbol_name) {
 
 Token* token_allocate(char* str, long num_chars, int type, char* error) {
 
-  /* allocate space for the string */
-  char* data = GC_MALLOC(sizeof(*data) * num_chars + 1); /* include space for null byte */
-  strncpy (data, str, num_chars);                        /* copy num_chars characters into data */
-  data[num_chars] = '\0';                                /* manually add the null byte */
+  /* allocate space for the string - include space for null byte */
+  char* data = GC_MALLOC(sizeof(*data) * num_chars + 1);
+  /* copy num_chars characters into data */
+  strncpy (data, str, num_chars);
+  /* manually add the null byte */
+  data[num_chars] = '\0';
 
   /* allocate space for the token struct */
   Token* token = GC_MALLOC(sizeof(*token));
@@ -648,29 +657,32 @@ char* unescape_string(char* str, long length) {
         /* replace '\"' with normal '"' */
       case '"':
         dest[j++]='"';
-        i++; /* skip extra char */
+        /* skip extra char */
+        i++;
         break;
 
         /* replace '\n' with newline 0x0A */
       case 'n':
         dest[j++]= 0x0A;
-        i++; /* skip extra char */
+        /* skip extra char */
+        i++;
         break;
 
         /* replace '\\' with '\' */
       case '\\':
         dest[j++]= '\\';
-        i++; /* skip extra char */
+        /* skip extra char */
+        i++;
         break;
 
       default:
         /* just a '\' symbol so copy it */
-              dest[j++]='\\';
+        dest[j++]='\\';
       }
     }
     /* not a quote so copy it */
     else {
-        dest[j++] = str[i];
+      dest[j++] = str[i];
     }
   }
   dest[j] = '\0';
