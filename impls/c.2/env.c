@@ -1,15 +1,14 @@
 #include <stdio.h>
 #include <gc.h>
 
-#include "libs/hashmap/hashmap.h"
 #include "types.h"
 #include "env.h"
 #include "reader.h"
 
 /* Note: caller must make sure enough exprs to match symbols */
-Env* env_make(Env* outer, list symbol_list, list exprs_list, MalType* more_symbol) {
+Env *env_make(Env *outer, List *symbol_list, List *exprs_list, MalType *more_symbol) {
 
-  Env*  env = GC_MALLOC(sizeof(*env));
+  Env *env = GC_MALLOC(sizeof(*env));
   env->outer = outer;
   env->data = hashmap_make(cmp_chars);
 
@@ -28,15 +27,15 @@ Env* env_make(Env* outer, list symbol_list, list exprs_list, MalType* more_symbo
   return env;
 }
 
-Env* env_set(Env* current, MalType* symbol, MalType* value) {
+Env *env_set(Env *current, MalType *symbol, MalType *value) {
 
-  current->data = hashmap_put(current->data, symbol->value.mal_symbol, value);
+  current->data = hashmap_assoc(current->data, symbol->value.mal_symbol, value);
   return current;
 }
 
-Env* env_find(Env* current, MalType* symbol) {
+Env *env_find(Env *current, MalType *symbol) {
 
-  MalType* val = hashmap_get(current->data, symbol->value.mal_symbol);
+  MalType *val = hashmap_get(current->data, symbol->value.mal_symbol);
 
   if (val) {
     return current;
@@ -45,13 +44,14 @@ Env* env_find(Env* current, MalType* symbol) {
     return env_find(current->outer, symbol);
   }
   else {
-    return NULL; /* not found */
+    /* not found */
+    return NULL;
   }
 }
 
-MalType* env_get(Env* current, MalType* symbol) {
+MalType *env_get(Env *current, MalType *symbol) {
 
-  Env* env = env_find(current, symbol);
+  Env *env = env_find(current, symbol);
 
   if (env) {
     return hashmap_get(env->data, symbol->value.mal_symbol);
@@ -61,7 +61,7 @@ MalType* env_get(Env* current, MalType* symbol) {
   }
 }
 
-Env* env_set_C_fn(Env* current, char* symbol_name, MalType*(*fn)(list)) {
+Env *env_set_C_fn(Env *current, char *symbol_name, MalType *(*fn)(List *)) {
 
   return env_set(current, make_symbol(symbol_name), make_function(fn));
 }

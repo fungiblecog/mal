@@ -10,93 +10,93 @@ MalType THE_TRUE = {MALTYPE_TRUE, 0, 0, {0}};
 MalType THE_FALSE = {MALTYPE_FALSE, 0, 0, {0}};
 MalType THE_NIL = {MALTYPE_NIL, 0, 0, {0}};
 
-inline int is_sequential(MalType* val) {
+inline int is_sequential(MalType *val) {
   return (val->type == MALTYPE_LIST || val->type == MALTYPE_VECTOR);
 }
 
-inline int is_self_evaluating(MalType* val) {
+inline int is_self_evaluating(MalType *val) {
   return (val->type == MALTYPE_KEYWORD || val->type == MALTYPE_INTEGER ||
 	  val->type == MALTYPE_FLOAT || val->type == MALTYPE_STRING ||
 	  val->type == MALTYPE_TRUE || val->type == MALTYPE_FALSE ||
 	  val->type == MALTYPE_NIL);
 }
 
-inline int is_list(MalType* val) {
+inline int is_list(MalType *val) {
   return (val->type == MALTYPE_LIST);
 }
 
-inline int is_vector(MalType* val) {
+inline int is_vector(MalType *val) {
   return (val->type == MALTYPE_VECTOR);
 }
 
-inline int is_hashmap(MalType* val) {
+inline int is_hashmap(MalType *val) {
   return (val->type == MALTYPE_HASHMAP);
 }
 
-inline int is_nil(MalType* val) {
+inline int is_nil(MalType *val) {
   return (val->type == MALTYPE_NIL);
 }
 
-inline int is_string(MalType* val) {
+inline int is_string(MalType *val) {
   return (val->type == MALTYPE_STRING);
 }
 
-inline int is_integer(MalType* val) {
+inline int is_integer(MalType *val) {
   return (val->type == MALTYPE_INTEGER);
 }
 
-inline int is_float(MalType* val) {
+inline int is_float(MalType *val) {
   return (val->type == MALTYPE_FLOAT);
 }
 
-inline int is_number(MalType* val) {
+inline int is_number(MalType *val) {
   return (val->type == MALTYPE_INTEGER || val->type == MALTYPE_FLOAT);
 }
 
-inline int is_true(MalType* val) {
+inline int is_true(MalType *val) {
   return (val->type == MALTYPE_TRUE);
 }
 
-inline int is_false(MalType* val) {
+inline int is_false(MalType *val) {
   return (val->type == MALTYPE_FALSE);
 }
 
-inline int is_symbol(MalType* val) {
+inline int is_symbol(MalType *val) {
   return (val->type == MALTYPE_SYMBOL);
 }
 
-inline int is_keyword(MalType* val) {
+inline int is_keyword(MalType *val) {
   return (val->type == MALTYPE_KEYWORD);
 }
 
-inline int is_atom(MalType* val) {
+inline int is_atom(MalType *val) {
   return (val->type == MALTYPE_ATOM);
 }
 
-inline int is_error(MalType* val) {
+inline int is_error(MalType *val) {
   return (val->type == MALTYPE_ERROR);
 }
 
-inline int is_callable(MalType* val) {
+inline int is_callable(MalType *val) {
   return (val->type == MALTYPE_FUNCTION || val->type == MALTYPE_CLOSURE);
 }
 
-inline int is_function(MalType* val) {
+inline int is_function(MalType *val) {
   return (val->type == MALTYPE_FUNCTION);
 }
 
-inline int is_closure(MalType* val) {
+inline int is_closure(MalType *val) {
   return (val->type == MALTYPE_CLOSURE);
 }
 
-inline int is_macro(MalType* val) {
+inline int is_macro(MalType *val) {
   return (val->is_macro);
 }
 
 
-MalType* make_symbol(char* value) {
+MalType *make_symbol(char *value) {
 
-  MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
+  MalType *mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_SYMBOL;
   mal_val->value.mal_symbol = value;
   mal_val->metadata = NULL;
@@ -104,9 +104,9 @@ MalType* make_symbol(char* value) {
   return mal_val;
 }
 
-MalType* make_integer(long value) {
+MalType *make_integer(long value) {
 
-  MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
+  MalType *mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_INTEGER;
   mal_val->value.mal_integer = value;
   mal_val->metadata = NULL;
@@ -114,9 +114,9 @@ MalType* make_integer(long value) {
   return mal_val;
 }
 
-MalType* make_float(double value) {
+MalType *make_float(double value) {
 
-  MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
+  MalType *mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_FLOAT;
   mal_val->value.mal_float = value;
   mal_val->metadata = NULL;
@@ -124,9 +124,9 @@ MalType* make_float(double value) {
   return mal_val;
 }
 
-MalType* make_keyword(char* value) {
+MalType *make_keyword(char *value) {
 
-  MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
+  MalType *mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_KEYWORD;
   mal_val->value.mal_keyword = value;
   mal_val->metadata = NULL;
@@ -134,9 +134,9 @@ MalType* make_keyword(char* value) {
   return mal_val;
 }
 
-MalType* make_string(char* value) {
+MalType *make_string(char *value) {
 
-  MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
+  MalType *mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_STRING;
   mal_val->value.mal_string = value;
   mal_val->metadata = NULL;
@@ -144,9 +144,9 @@ MalType* make_string(char* value) {
   return mal_val;
 }
 
-MalType* make_list(list value) {
+MalType *make_list(List *value) {
 
-  MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
+  MalType *mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_LIST;
   mal_val->value.mal_list = value;
   mal_val->metadata = NULL;
@@ -154,9 +154,9 @@ MalType* make_list(list value) {
   return mal_val;
 }
 
-MalType* make_vector(vector value) {
+MalType *make_vector(Vector *value) {
 
-  MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
+  MalType *mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_VECTOR;
   mal_val->value.mal_vector = value;
   mal_val->metadata = NULL;
@@ -164,9 +164,9 @@ MalType* make_vector(vector value) {
   return mal_val;
 }
 
-MalType* make_hashmap(hashmap value) {
+MalType *make_hashmap(Hashmap *value) {
 
-  MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
+  MalType *mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_HASHMAP;
   mal_val->value.mal_hashmap = value;
   mal_val->metadata = NULL;
@@ -174,9 +174,9 @@ MalType* make_hashmap(hashmap value) {
   return mal_val;
 }
 
-MalType* make_atom(MalType* value) {
+MalType *make_atom(MalType *value) {
 
-  MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
+  MalType *mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_ATOM;
   mal_val->value.mal_atom = value;
   mal_val->metadata = NULL;
@@ -184,9 +184,9 @@ MalType* make_atom(MalType* value) {
   return mal_val;
 }
 
-MalType* make_function(MalType*(*fn)(list args)) {
+MalType *make_function(MalType *(*fn)(List *args)) {
 
-  MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
+  MalType *mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_FUNCTION;
   mal_val->value.mal_function = fn;
   mal_val->is_macro = 0;
@@ -195,14 +195,15 @@ MalType* make_function(MalType*(*fn)(list args)) {
   return mal_val;
 }
 
-MalType* make_closure(Env* env, MalType* parameters, MalType* definition, MalType* more_symbol) {
+MalType *make_closure(Env *env, MalType *parameters, \
+                      MalType *definition, MalType *more_symbol) {
 
-  MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
+  MalType *mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_CLOSURE;
   mal_val->metadata = NULL;
 
   /* Allocate memory for embedded struct */
-  MalClosure* mc = GC_MALLOC(sizeof(*mc));
+  MalClosure *mc = GC_MALLOC(sizeof(*mc));
   mc->env = env;
   mc->parameters = parameters;
   mc->definition = definition;
@@ -210,28 +211,29 @@ MalType* make_closure(Env* env, MalType* parameters, MalType* definition, MalTyp
 
   mal_val->is_macro = 0;
   mal_val->value.mal_closure = mc;
+
   return mal_val;
 }
 
-inline MalType* make_true(void) {
+inline MalType *make_true(void) {
   return &THE_TRUE;
 }
 
-inline MalType* make_false(void) {
+inline MalType *make_false(void) {
   return &THE_FALSE;
 }
 
-inline MalType* make_nil(void) {
+inline MalType *make_nil(void) {
   return &THE_NIL;
 }
 
-MalType* make_error(char* msg) {
+MalType *make_error(char *msg) {
 
-  MalType* mal_string = GC_MALLOC(sizeof(*mal_string));
+  MalType *mal_string = GC_MALLOC(sizeof(*mal_string));
   mal_string->type = MALTYPE_STRING;
   mal_string->value.mal_string = msg;
 
-  MalType* mal_val = GC_MALLOC(sizeof(*mal_val));
+  MalType *mal_val = GC_MALLOC(sizeof(*mal_val));
   mal_val->type = MALTYPE_ERROR;
   mal_val->value.mal_error = mal_string;
   mal_val->metadata = NULL;
@@ -239,12 +241,12 @@ MalType* make_error(char* msg) {
   return mal_val;
 }
 
-MalType* make_error_fmt(char* fmt, ...) {
+MalType *make_error_fmt(char *fmt, ...) {
 
   va_list argptr;
   va_start(argptr, fmt);
 
-  char* buffer = GC_MALLOC(sizeof(*buffer) * ERROR_BUFFER_SIZE);
+  char *buffer = GC_MALLOC(sizeof(*buffer) * ERROR_BUFFER_SIZE);
 
   long n = vsnprintf(buffer, ERROR_BUFFER_SIZE, fmt, argptr);
   va_end(argptr);
@@ -260,9 +262,9 @@ MalType* make_error_fmt(char* fmt, ...) {
   return make_error(buffer);
 }
 
-MalType* wrap_error(MalType* value) {
+MalType *wrap_error(MalType *value) {
 
-  MalType* mal_error = GC_MALLOC(sizeof(*mal_error));
+  MalType *mal_error = GC_MALLOC(sizeof(*mal_error));
   mal_error->type = MALTYPE_ERROR;
   mal_error->metadata = NULL;
   mal_error->value.mal_error = value;
@@ -270,9 +272,9 @@ MalType* wrap_error(MalType* value) {
   return mal_error;
 }
 
-MalType* copy_type(MalType* value) {
+MalType *copy_type(MalType *value) {
 
-  MalType* new_val = GC_MALLOC(sizeof(*new_val));
+  MalType *new_val = GC_MALLOC(sizeof(*new_val));
 
   new_val->type = value->type;
   new_val->is_macro = value->is_macro;
@@ -283,15 +285,15 @@ MalType* copy_type(MalType* value) {
 }
 
 /* comparison function for char* */
-int cmp_chars(gptr val1, gptr val2) {
-  return (strcmp((char*)val1, (char*)val2) == 0);
+int cmp_chars(void *val1, void *val2) {
+  return (strcmp((char *)val1, (char *)val2) == 0);
 }
 
 /* comparison function for MALTYPES */
-int cmp_maltypes(gptr val1, gptr val2) {
+int cmp_maltypes(void *val1, void *val2) {
 
-  MalType* mal_1 = val1;
-  MalType* mal_2 = val2;
+  MalType *mal_1 = val1;
+  MalType *mal_2 = val2;
 
   if (mal_1->type != mal_2->type) { return 0; }
 
@@ -318,12 +320,12 @@ int cmp_maltypes(gptr val1, gptr val2) {
 }
 
 /* conversion uses iterator interface */
-list vector_to_list(vector vec) {
+List *vector_to_list(Vector *vec) {
 
   if(vec->count == 0) { return NULL; }
 
-  list lst = NULL;
-  iterator iter = vector_iterator_make(vec);
+  List *lst = NULL;
+  Iterator *iter = vector_iterator_make(vec);
 
   while (iter) {
     lst = list_cons(lst, iterator_value(iter));

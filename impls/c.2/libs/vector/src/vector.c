@@ -6,30 +6,30 @@
 
 #define INITIAL_SIZE 8
 
-vector vector_make()
+Vector *vector_make(void)
 {
 
   /* make an empty vector */
-  vector vec = GC_MALLOC(sizeof(*vec));
+  Vector *vec = GC_MALLOC(sizeof(*vec));
 
   vec->size = INITIAL_SIZE;
   vec->count = 0;
-  vec->data = GC_MALLOC(INITIAL_SIZE*sizeof(gptr));
+  vec->data = GC_MALLOC(INITIAL_SIZE*sizeof(void *));
 
   return vec;
 }
 
-static vector vector_resize(vector vec, int new_size)
+static Vector *vector_resize(Vector *vec, int new_size)
 {
-  gptr *data = GC_REALLOC(vec->data, sizeof(gptr) * new_size);
-    if (data) {
-      vec->data = data;
-      vec->size = new_size;
-    }
-    return vec;
+  void **data = GC_REALLOC(vec->data, sizeof(void *) * new_size);
+  if (data) {
+    vec->data = data;
+    vec->size = new_size;
+  }
+  return vec;
 }
 
-vector vector_push(vector vec, gptr data_ptr)
+Vector *vector_push(Vector *vec, void *data)
 {
   assert(vec != NULL);
 
@@ -39,13 +39,13 @@ vector vector_push(vector vec, gptr data_ptr)
   }
 
   /* increment count and add item to end of array */
-  vec->data[vec->count] = data_ptr;
+  vec->data[vec->count] = data;
   vec->count++;
 
   return vec;
 }
 
-vector vector_pop(vector vec)
+Vector *vector_pop(Vector *vec)
 {
   assert(vec != NULL);
 
@@ -57,52 +57,50 @@ vector vector_pop(vector vec)
   return vec;
 }
 
-gptr vector_get(vector vec, int n)
+void *vector_get(Vector *vec, int idx)
 {
   assert(vec!= NULL);
 
-  if( (n < 0) || (n >= vec->count) ) {
+  if ((idx < 0) || (idx >= vec->count)) {
       return NULL;
 
   } else {
-    return vec->data[n];
+    return vec->data[idx];
   }
 }
 
-vector vector_set(vector vec, int n, gptr data_ptr)
+Vector *vector_set(Vector *vec, int idx, void *data)
 {
   assert(vec!= NULL);
 
   /* index out of bounds */
-  if ( (n < 0) || (n >= vec->count) ) {
+  if ((idx < 0) || (idx >= vec->count)) {
     return vec;
 
   } else {
-    vec->data[n] = data_ptr;
+    vec->data[idx] = data;
     return vec;
   }
 }
 
-int vector_empty(vector vec)
+int vector_empty(Vector *vec)
 {
   assert(vec != NULL);
-
   return (vec->count == 0);
 }
 
-int vector_count(vector vec)
+int vector_count(Vector *vec)
 {
   assert(vec!= NULL);
-
   return vec->count;
 }
 
-vector vector_copy(vector vec)
+Vector *vector_copy(Vector *vec)
 {
   assert(vec!= NULL);
 
   /* create a new vector */
-  vector copy = vector_make();
+  Vector *copy = vector_make();
   copy->size = vec->size;
   copy->count = vec->count;
 
@@ -117,15 +115,15 @@ vector vector_copy(vector vec)
   return copy;
 }
 
-static iterator vector_next_fn(iterator iter) {
+static Iterator *vector_next_fn(Iterator *iter) {
   assert(iter != NULL);
 
   /* check for end of the array */
-  gptr curr = iter->current + sizeof(gptr);
+  void *curr = iter->current + sizeof(void *);
 
   if (curr == iter->data) { return NULL; }
 
-  iterator new_iter = iterator_copy(iter);
+  Iterator *new_iter = iterator_copy(iter);
 
   /* increment the current pointer */
   new_iter->current = curr;
@@ -137,7 +135,7 @@ static iterator vector_next_fn(iterator iter) {
   return new_iter;
 }
 
-iterator vector_iterator_make(vector vec)
+Iterator *vector_iterator_make(Vector *vec)
 {
   assert(vec != NULL);
 
@@ -145,7 +143,7 @@ iterator vector_iterator_make(vector vec)
   if (vector_empty(vec)) { return NULL; }
 
   /* create an iterator */
-  iterator iter = GC_MALLOC(sizeof(*iter));
+  Iterator *iter = GC_MALLOC(sizeof(*iter));
 
   /* install the next function for a vector */
   iter->next_fn = vector_next_fn;

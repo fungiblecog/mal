@@ -27,26 +27,26 @@
 
 #define PROMPT_STRING "user> "
 
-MalType* READ(char* str) {
+MalType *READ(char *str) {
 
   return read_str(str);
 }
 
-MalType* EVAL(MalType* ast, Env* env) {
+MalType *EVAL(MalType *ast, Env *env) {
 
   /* forward references */
-  MalType* eval_ast(MalType* ast, Env* env);
-  MalType* eval_defbang(MalType* ast, Env** env);
-  void eval_letstar(MalType** ast, Env** env);
-  void eval_if(MalType** ast, Env** env);
-  MalType* eval_fnstar(MalType* ast, Env* env);
-  MalType* eval_do(MalType* ast, Env* env);
-  MalType* eval_quote(MalType* ast);
-  MalType* eval_quasiquote(MalType* ast);
-  MalType* eval_quasiquoteexpand(MalType* ast);
-  MalType* eval_defmacrobang(MalType*, Env** env);
-  MalType* eval_macroexpand(MalType* ast, Env* env);
-  MalType* macroexpand(MalType* ast, Env* env);
+  MalType *eval_ast(MalType *ast, Env *env);
+  MalType *eval_defbang(MalType *ast, Env **env);
+  void eval_letstar(MalType **ast, Env **env);
+  void eval_if(MalType **ast, Env **env);
+  MalType *eval_fnstar(MalType *ast, Env *env);
+  MalType *eval_do(MalType *ast, Env *env);
+  MalType *eval_quote(MalType *ast);
+  MalType *eval_quasiquote(MalType *ast);
+  MalType *eval_quasiquoteexpand(MalType *ast);
+  MalType *eval_defmacrobang(MalType *ast, Env **env);
+  MalType *eval_macroexpand(MalType *ast, Env *env);
+  MalType *macroexpand(MalType *ast, Env *env);
 
   /* Use goto to jump here rather than calling eval for tail-call elimination */
  TCE_entry_point:
@@ -65,8 +65,8 @@ MalType* EVAL(MalType* ast, Env* env) {
   if (ast->value.mal_list == NULL) { return ast; }
 
   /* list */
-  MalType* first = (ast->value.mal_list)->data;
-  char* symbol = first->value.mal_symbol;
+  MalType *first = (ast->value.mal_list)->data;
+  char *symbol = first->value.mal_symbol;
 
   if (is_symbol(first)) {
 
@@ -113,7 +113,7 @@ MalType* EVAL(MalType* ast, Env* env) {
     }
     else if (strcmp(symbol, SYMBOL_QUASIQUOTEEXPAND) == 0) {
 
-      list lst = ast->value.mal_list;
+      List *lst = ast->value.mal_list;
       return eval_quasiquote(make_list(lst));
     }
     else if (strcmp(symbol, SYMBOL_DEFMACROBANG) == 0) {
@@ -125,21 +125,21 @@ MalType* EVAL(MalType* ast, Env* env) {
   }
 
   /* first element is not a special symbol */
-  MalType* evaluated_list = eval_ast(ast, env);
+  MalType *evaluated_list = eval_ast(ast, env);
 
   if (is_error(evaluated_list)) { return evaluated_list; }
 
   /* apply the first element of the list to the arguments */
-  list evlst = evaluated_list->value.mal_list;
-  MalType* func = evlst->data;
+  List *evlst = evaluated_list->value.mal_list;
+  MalType *func = evlst->data;
 
   if (is_function(func)) {
     return (*func->value.mal_function)(evlst->next);
   }
   else if (is_closure(func)) {
 
-    MalClosure* closure = func->value.mal_closure;
-    list params = (closure->parameters)->value.mal_list;
+    MalClosure *closure = func->value.mal_closure;
+    List *params = (closure->parameters)->value.mal_list;
 
     long param_count = list_count(params);
     long arg_count = list_count(evlst->next);
@@ -166,39 +166,39 @@ MalType* EVAL(MalType* ast, Env* env) {
   }
 }
 
-void PRINT(MalType* val) {
+void PRINT(MalType *val) {
 
-  char* output = pr_str(val, READABLY);
+  char *output = pr_str(val, READABLY);
   printf("%s\n", output);
 }
 
-void rep(char* str, Env* env) {
+void rep(char *str, Env *env) {
 
   PRINT(EVAL(READ(str), env));
 }
 
 /* declare as global so it can be accessed by mal_eval */
-Env* global_env;
+Env *global_env;
 
-MalType* mal_eval(list args) {
+MalType *mal_eval(List *args) {
 
-  MalType* ast = args->data;
+  MalType *ast = args->data;
   return EVAL(ast, global_env);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 
-  Env* repl_env = env_make(NULL, NULL, NULL, NULL);
+  Env *repl_env = env_make(NULL, NULL, NULL, NULL);
   global_env = repl_env;
 
-  ns* core = ns_make_core();
-  iterator iter = hashmap_iterator_make(core->mappings);
+  ns *core = ns_make_core();
+  Iterator *iter = hashmap_iterator_make(core->mappings);
 
   while (iter) {
-    char* symbol = iter->value;
+    char *symbol = iter->value;
 
     iter = iterator_next(iter);
-    MalType*(*function)(list) = (MalType*(*)(list))iter->value;
+    MalType *(*function)(List *) = (MalType *(*)(List *))iter->value;
 
     env_set_C_fn(repl_env, symbol, function);
 
@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
   EVAL(READ("(defmacro! cond (fn* (& xs) (if (> (count xs) 0) (list 'if (first xs) (if (> (count xs) 1) (nth xs 1) (throw \"odd number of forms to cond\")) (cons 'cond (rest (rest xs)))))))"), repl_env);
 
   /* make command line arguments available in the environment */
-  list lst = NULL;
+  List *lst = NULL;
   for (long i = 2; i < argc; i++) {
     lst = list_cons(lst, make_string(argv[i]));
   }
@@ -223,7 +223,7 @@ int main(int argc, char** argv) {
   if (argc > 1) {
 
     /* first argument on command line is filename */
-    char* load_command = snprintfbuf(1024, "(load-file \"%s\")", argv[1]);
+    char *load_command = snprintfbuf(1024, "(load-file \"%s\")", argv[1]);
     EVAL(READ(load_command), repl_env);
   }
   /* run in repl mode when no cmd line args */
@@ -237,7 +237,7 @@ int main(int argc, char** argv) {
 
       /* print prompt and get input*/
       /* readline allocates memory for input */
-      char* input = readline(PROMPT_STRING);
+      char *input = readline(PROMPT_STRING);
 
       /* Check for EOF (Ctrl-D) */
       if (!input) {
@@ -258,16 +258,16 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-MalType* eval_ast(MalType* ast, Env* env) {
+MalType *eval_ast(MalType *ast, Env *env) {
 
   /* forward references */
-  MalType *evaluate_list(list lst, Env* env);
-  MalType *evaluate_vector(vector vec, Env* env);
-  MalType *evaluate_hashmap(hashmap map, Env* env);
+  MalType *evaluate_list(List *lst, Env *env);
+  MalType *evaluate_vector(Vector *vec, Env *env);
+  MalType *evaluate_hashmap(Hashmap *map, Env *env);
 
   if (is_symbol(ast)) {
 
-    MalType* symbol_value = env_get(env, ast);
+    MalType *symbol_value = env_get(env, ast);
 
     if (symbol_value) {
       return symbol_value;
@@ -292,22 +292,22 @@ MalType* eval_ast(MalType* ast, Env* env) {
   }
 }
 
-MalType* eval_defbang(MalType* ast, Env** env) {
+MalType *eval_defbang(MalType *ast, Env **env) {
 
-  list lst = (ast->value.mal_list)->next;
+  List *lst = (ast->value.mal_list)->next;
 
   if (!lst || !lst->next || lst->next->next) {
     return make_error_fmt("'def!': expected exactly two arguments");
   }
 
-  MalType* defbang_symbol = lst->data;
+  MalType *defbang_symbol = lst->data;
 
   if (!is_symbol(defbang_symbol)) {
     return make_error_fmt("'def!': expected symbol for first argument");
   }
 
-  MalType* defbang_value = lst->next->data;
-  MalType* result = EVAL(defbang_value, *env);
+  MalType *defbang_value = lst->next->data;
+  MalType *result = EVAL(defbang_value, *env);
 
   if (!is_error(result)){
     *env = env_set(*env, defbang_symbol, result);
@@ -315,24 +315,24 @@ MalType* eval_defbang(MalType* ast, Env** env) {
   return result;
 }
 
-void eval_letstar(MalType** ast, Env** env) {
+void eval_letstar(MalType **ast, Env **env) {
 
-  list lst = (*ast)->value.mal_list;
+  List *lst = (*ast)->value.mal_list;
 
   if (!lst->next) {
     *ast = make_error("'let*': missing bindings list");
     return;
   }
 
-  MalType* bindings = lst->next->data;
-  MalType* forms = lst->next->next ? lst->next->next->data : make_nil();
+  MalType *bindings = lst->next->data;
+  MalType *forms = lst->next->next ? lst->next->next->data : make_nil();
 
   if (!is_sequential(bindings)) {
     *ast = make_error("'let*': first argument is not list or vector");
     return;
   }
 
-  iterator bindings_iter = NULL;
+  Iterator *bindings_iter = NULL;
 
   /* bindings can be a list or vector */
   if (is_vector(bindings)) {
@@ -351,14 +351,14 @@ void eval_letstar(MalType** ast, Env** env) {
     bindings_iter = list_iterator_make(bindings->value.mal_list);
   }
 
-  Env* letstar_env = env_make(*env, NULL, NULL, NULL);
+  Env *letstar_env = env_make(*env, NULL, NULL, NULL);
 
   /* evaluate the bindings */
   while (bindings_iter) {
 
-    MalType* symbol = bindings_iter->value;
+    MalType *symbol = bindings_iter->value;
     bindings_iter = iterator_next(bindings_iter);
-    MalType* value = EVAL(bindings_iter->value, letstar_env);
+    MalType *value = EVAL(bindings_iter->value, letstar_env);
 
     /* early return from error */
     if (is_error(value)) {
@@ -375,9 +375,9 @@ void eval_letstar(MalType** ast, Env** env) {
   return;
 }
 
-void eval_if(MalType** ast, Env** env) {
+void eval_if(MalType **ast, Env **env) {
 
-  list lst = (*ast)->value.mal_list;
+  List *lst = (*ast)->value.mal_list;
 
   if (!lst->next || !lst->next->next) {
     *ast = make_error("'if': too few arguments");
@@ -389,7 +389,7 @@ void eval_if(MalType** ast, Env** env) {
     return;
   }
 
-  MalType* condition = EVAL(lst->next->data, *env);
+  MalType *condition = EVAL(lst->next->data, *env);
 
   if (is_error(condition)) {
     *ast = condition;
@@ -414,12 +414,12 @@ void eval_if(MalType** ast, Env** env) {
   }
 }
 
-MalType* eval_fnstar(MalType* ast, Env* env) {
+MalType *eval_fnstar(MalType *ast, Env *env) {
 
   /* forward reference */
-  MalType* regularise_parameters(list* params, MalType** more);
+  MalType *regularise_parameters(List **params, MalType **more);
 
-  list lst = ast->value.mal_list;
+  List *lst = ast->value.mal_list;
 
   if (!lst->next) {
     return make_error("'fn*': missing argument list");
@@ -428,26 +428,26 @@ MalType* eval_fnstar(MalType* ast, Env* env) {
     return make_error("'fn*': missing function body");
   }
 
-  MalType* params = lst->next->data;
+  MalType *params = lst->next->data;
 
-  list args = NULL;
+  List *args = NULL;
   if (is_vector(params)) {
     args = vector_to_list(params->value.mal_vector);
   } else {
     args = params->value.mal_list;
   }
 
-  MalType* more_symbol = NULL;
+  MalType *more_symbol = NULL;
 
-  MalType* result = regularise_parameters(&args, &more_symbol);
+  MalType *result = regularise_parameters(&args, &more_symbol);
   if (is_error(result)) { return result; }
 
   return make_closure(env, make_list(args), lst->next->next->data, more_symbol);
 }
 
-MalType* eval_do(MalType* ast, Env* env) {
+MalType *eval_do(MalType *ast, Env *env) {
 
-  list lst = ast->value.mal_list;
+  List *lst = ast->value.mal_list;
 
   /* handle empty 'do' */
   if (!lst->next) {
@@ -458,7 +458,7 @@ MalType* eval_do(MalType* ast, Env* env) {
   lst = lst->next;
   while (lst->next) {
 
-    MalType* val = EVAL(lst->data, env);
+    MalType *val = EVAL(lst->data, env);
 
     /* return error early */
     if (is_error(val)) {
@@ -470,9 +470,9 @@ MalType* eval_do(MalType* ast, Env* env) {
   return lst->data;
 }
 
-MalType* eval_quote(MalType* ast) {
+MalType *eval_quote(MalType *ast) {
 
-  list lst = (ast->value.mal_list)->next;
+  List *lst = (ast->value.mal_list)->next;
 
   if (!lst) {
     return make_nil();
@@ -485,12 +485,12 @@ MalType* eval_quote(MalType* ast) {
   }
 }
 
-MalType* eval_quasiquote(MalType* ast) {
+MalType *eval_quasiquote(MalType *ast) {
 
   /* forward reference */
-  MalType* quasiquote(MalType* ast);
+  MalType *quasiquote(MalType *ast);
 
-  iterator iter = NULL;
+  Iterator *iter = NULL;
   if (is_vector(ast)) {
     iter = vector_iterator_make(ast->value.mal_vector);
   }
@@ -509,11 +509,11 @@ MalType* eval_quasiquote(MalType* ast) {
   return quasiquote(iter->value);
 }
 
-MalType* quasiquote(MalType* ast) {
+MalType *quasiquote(MalType *ast) {
 
   /* forward references */
-  MalType* quasiquote_list(MalType* ast);
-  MalType* quasiquote_vector(MalType* ast);
+  MalType *quasiquote_list(MalType *ast);
+  MalType *quasiquote_vector(MalType *ast);
 
   /* argument to quasiquote is self-evaluating: (quasiquote val)
      => val */
@@ -532,25 +532,25 @@ MalType* quasiquote(MalType* ast) {
      => (quote val) */
   else {
 
-    list lst = list_make(ast);
+    List *lst = list_make(ast);
     lst = list_cons(lst, make_symbol("quote"));
     return make_list(lst);
   }
 }
 
-MalType* quasiquote_vector(MalType* ast) {
+MalType *quasiquote_vector(MalType *ast) {
 
   /* forward references */
-  MalType* quasiquote_list(MalType* ast);
+  MalType *quasiquote_list(MalType *ast);
 
-  vector vec = ast->value.mal_vector;
+  Vector *vec = ast->value.mal_vector;
   if (!vector_empty(vec)) {
 
-    MalType* first = vector_get(vec, 0);
+    MalType *first = vector_get(vec, 0);
     /* if first element is unquote return the vector quoted */
     if (is_symbol(first) && strcmp(first->value.mal_symbol, SYMBOL_UNQUOTE) == 0) {
 
-      list lst = list_make(ast);
+      List *lst = list_make(ast);
       lst = list_cons(lst, make_symbol("quote"));
 
       return make_list(lst);
@@ -558,25 +558,25 @@ MalType* quasiquote_vector(MalType* ast) {
   }
 
   /* otherwise process like a list and then convert back to a vector */
-  MalType* val = quasiquote_list(make_list(vector_to_list(ast->value.mal_vector)));
+  MalType *val = quasiquote_list(make_list(vector_to_list(ast->value.mal_vector)));
 
   if (is_error(val)) { return val; }
 
-  list result = list_make(make_symbol("vec"));
+  List *result = list_make(make_symbol("vec"));
   result = list_reverse(list_cons(result, val));
 
   return make_list(result);
 }
 
-MalType* quasiquote_list(MalType* ast) {
+MalType *quasiquote_list(MalType *ast) {
 
-  list args = ast->value.mal_list;
+  List *args = ast->value.mal_list;
 
   /* handle empty list: (quasiquote ())
      => () */
   if (!args) { return make_list(NULL); }
 
-  MalType* first = args->data;
+  MalType *first = args->data;
 
   /* handle unquote: (quasiquote (unquote second))
      => second */
@@ -597,18 +597,18 @@ MalType* quasiquote_list(MalType* ast) {
   else if (is_list(first) &&
            first->value.mal_list != NULL &&
            is_symbol(first->value.mal_list->data) &&
-           strcmp(((MalType*)first->value.mal_list->data)->value.mal_symbol, \
+           strcmp(((MalType *)first->value.mal_list->data)->value.mal_symbol, \
                   SYMBOL_SPLICE_UNQUOTE) == 0) {
 
     if (!first->value.mal_list->next) {
       return make_error("'quasiquote': splice-unquote expected exactly one argument");
     }
 
-    MalType* first_second = first->value.mal_list->next->data;
-    list lst = list_make(make_symbol("concat"));
+    MalType *first_second = first->value.mal_list->next->data;
+    List *lst = list_make(make_symbol("concat"));
     lst = list_cons(lst, first_second);
 
-    MalType* rest = quasiquote(make_list(args->next));
+    MalType *rest = quasiquote(make_list(args->next));
     if (is_error(rest)) {
       return rest;
     }
@@ -622,16 +622,16 @@ MalType* quasiquote_list(MalType* ast) {
      => (cons (quasiquote first) (quasiquote rest)) */
   else {
 
-    list lst = list_make(make_symbol("cons"));
+    List *lst = list_make(make_symbol("cons"));
 
-    MalType* first = quasiquote(args->data);
+    MalType *first = quasiquote(args->data);
     if (is_error(first)) {
       return first;
     } else {
       lst = list_cons(lst, first);
     }
 
-    MalType* rest = quasiquote(make_list(args->next));
+    MalType *rest = quasiquote(make_list(args->next));
     if (is_error(rest)) {
       return rest;
     } else {
@@ -643,22 +643,22 @@ MalType* quasiquote_list(MalType* ast) {
   }
 }
 
-MalType* eval_defmacrobang(MalType* ast, Env** env) {
+MalType *eval_defmacrobang(MalType *ast, Env **env) {
 
-  list lst = (ast->value.mal_list)->next;
+  List *lst = (ast->value.mal_list)->next;
 
   if (!lst || !lst->next || lst->next->next) {
     return make_error_fmt("'defmacro!': expected exactly two arguments");
   }
 
-  MalType* defbang_symbol = lst->data;
+  MalType *defbang_symbol = lst->data;
 
   if (!is_symbol(defbang_symbol)) {
     return make_error_fmt("'defmacro!': expected symbol for first argument");
   }
 
-  MalType* defbang_value = lst->next->data;
-  MalType* result = EVAL(defbang_value, *env);
+  MalType *defbang_value = lst->next->data;
+  MalType *result = EVAL(defbang_value, *env);
 
   if (!is_error(result)) {
     result = copy_type(result);
@@ -668,12 +668,12 @@ MalType* eval_defmacrobang(MalType* ast, Env** env) {
   return result;
 }
 
-MalType* eval_macroexpand(MalType* ast, Env* env) {
+MalType *eval_macroexpand(MalType *ast, Env *env) {
 
   /* forward reference */
-  MalType* macroexpand(MalType* ast, Env* env);
+  MalType *macroexpand(MalType *ast, Env *env);
 
-  list lst = ast->value.mal_list;
+  List *lst = ast->value.mal_list;
 
   if (!lst->next) {
     return make_nil();
@@ -686,34 +686,34 @@ MalType* eval_macroexpand(MalType* ast, Env* env) {
   }
 }
 
-MalType* macroexpand(MalType* ast, Env* env) {
+MalType *macroexpand(MalType *ast, Env *env) {
 
   /* forward reference */
-  int is_macro_call(MalType* ast, Env* env);
+  int is_macro_call(MalType *ast, Env *env);
 
   while(is_macro_call(ast, env)) {
 
-    list lst = ast->value.mal_list;
+    List *lst = ast->value.mal_list;
 
-    MalType* macro_fn = env_get(env, lst->data);
-    MalClosure* cls = macro_fn->value.mal_closure;
-    MalType* more_symbol = cls->more_symbol;
+    MalType *macro_fn = env_get(env, lst->data);
+    MalClosure *closure = macro_fn->value.mal_closure;
+    MalType *more_symbol = closure->more_symbol;
 
-    list params = (cls->parameters)->value.mal_list;
-    list args_list = lst->next;
+    List *params = (closure->parameters)->value.mal_list;
+    List *args_list = lst->next;
 
-    env = env_make(cls->env, params, args_list, more_symbol);
-    ast = EVAL(cls->definition, env);
+    env = env_make(closure->env, params, args_list, more_symbol);
+    ast = EVAL(closure->definition, env);
   }
   return ast;
 }
 
-MalType *evaluate_list(list lst, Env* env) {
+MalType *evaluate_list(List *lst, Env *env) {
 
-  list evlst = NULL;
+  List *evlst = NULL;
   while (lst) {
 
-    MalType* val = EVAL(lst->data, env);
+    MalType *val = EVAL(lst->data, env);
 
     if (is_error(val)) {
       return val;
@@ -725,14 +725,14 @@ MalType *evaluate_list(list lst, Env* env) {
   return make_list(list_reverse(evlst));
 }
 
-MalType *evaluate_vector(vector vec, Env* env) {
+MalType *evaluate_vector(Vector *vec, Env *env) {
 
-  iterator iter = vector_iterator_make(vec);
-  vector evec = vector_make();
+  Iterator *iter = vector_iterator_make(vec);
+  Vector *evec = vector_make();
 
   while (iter) {
 
-    MalType* val = EVAL(iter->value, env);
+    MalType *val = EVAL(iter->value, env);
 
     if (is_error(val)) { return val; }
 
@@ -742,33 +742,33 @@ MalType *evaluate_vector(vector vec, Env* env) {
   return make_vector(evec);
 }
 
-MalType *evaluate_hashmap(hashmap map, Env* env) {
+MalType *evaluate_hashmap(Hashmap *map, Env *env) {
 
-  iterator iter = hashmap_iterator_make(map);
-  hashmap emap = hashmap_make(cmp_maltypes);
+  Iterator *iter = hashmap_iterator_make(map);
+  Hashmap *emap = hashmap_make(cmp_maltypes);
 
   while (iter) {
 
     /* keys are unevaluated */
-    MalType* key = iter->value;
+    MalType *key = iter->value;
     /* values are evaluated */
     iter = iterator_next(iter);
-    MalType* val = EVAL(iter->value, env);
+    MalType *val = EVAL(iter->value, env);
 
     if (is_error(val)) { return val; }
 
-    emap = hashmap_put(emap, key, val);
+    emap = hashmap_assoc(emap, key, val);
     iter = iterator_next(iter);
   }
   return make_hashmap(emap);
 }
 
-MalType* regularise_parameters(list* args, MalType** more_symbol) {
+MalType *regularise_parameters(List **args, MalType **more_symbol) {
 
-  list regular_args = NULL;
+  List *regular_args = NULL;
   while (*args) {
 
-    MalType* val = (*args)->data;
+    MalType *val = (*args)->data;
 
     if (!is_symbol(val)) {
       return make_error_fmt("non-symbol found in fn argument list '%s'", \
@@ -827,17 +827,17 @@ MalType* regularise_parameters(list* args, MalType** more_symbol) {
 }
 
 /* used by core functions but not EVAL as doesn't do TCE */
-MalType* apply(MalType* fn, list args) {
+MalType *apply(MalType *fn, List *args) {
 
   if (is_function(fn)) {
 
-    MalType* (*fun_ptr)(list) = fn->value.mal_function;
+    MalType *(*fun_ptr)(List *) = fn->value.mal_function;
     return (*fun_ptr)(args);
   }
   else { /* is_closure(fn) */
 
-    MalClosure* c = fn->value.mal_closure;
-    list params = (c->parameters)->value.mal_list;
+    MalClosure *closure = fn->value.mal_closure;
+    List *params = (closure->parameters)->value.mal_list;
 
     long param_count = list_count(params);
     long arg_count = list_count(args);
@@ -845,17 +845,17 @@ MalType* apply(MalType* fn, list args) {
     if (param_count > arg_count) {
       return make_error("too few arguments supplied to function");
     }
-    else if ((param_count < arg_count) && !c->more_symbol) {
+    else if ((param_count < arg_count) && !closure->more_symbol) {
       return make_error("too many arguments supplied to function");
     }
     else {
-      Env* env = env_make(c->env, params, args, c->more_symbol);
+      Env *env = env_make(closure->env, params, args, closure->more_symbol);
       return EVAL(fn->value.mal_closure->definition, env);
     }
   }
 }
 
-int is_macro_call(MalType* ast, Env* env) {
+int is_macro_call(MalType *ast, Env *env) {
 
   /* not a list */
   if (!is_list(ast)) {
@@ -863,19 +863,19 @@ int is_macro_call(MalType* ast, Env* env) {
   }
 
   /* empty list */
-  list lst = ast->value.mal_list;
+  List *lst = ast->value.mal_list;
   if (!lst) {
     return 0;
   }
 
   /* first item not a symbol */
-  MalType* first = lst->data;
+  MalType *first = lst->data;
   if (!is_symbol(first)) {
     return 0;
   }
 
   /* lookup symbol */
-  MalType* val = env_get(env, first);
+  MalType *val = env_get(env, first);
   if (is_error(val)) {
     return 0;
   }

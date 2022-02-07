@@ -1,6 +1,6 @@
 #include <string.h>
 #include "../../unity/src/unity.h"
-#include "../list.h"
+#include "../src/list.h"
 #include "gc.h"
 
 /* included for time and rand functions */
@@ -22,7 +22,7 @@ char *make_test_str(int i) {
   return buf;
 }
 
-int cmp_chars(gptr key1, gptr key2) {
+int cmp_chars(void *key1, void *key2) {
   return (strcmp((char*)key1, (char*)key2) == 0);
 }
 
@@ -37,7 +37,7 @@ void tearDown(void) {
 /* tests */
 void test_list_make(void)
 {
-  list lst = NULL;
+  List *lst = NULL;
 
   /* create a list NULL value*/
   lst = list_make(NULL);
@@ -51,7 +51,7 @@ void test_list_make(void)
 
   /* create list with single item */
   char* val = "Test value";
-  lst = list_make((gptr)val);
+  lst = list_make((void *)val);
 
   /* test the data */
   TEST_ASSERT_EQUAL_STRING(val, (char*)lst->data);
@@ -63,7 +63,7 @@ void test_list_make(void)
 
 void test_list_empty(void) {
 
-  list lst = list_make(NULL);
+  List *lst = list_make(NULL);
 
   /* test non-empty list */
   TEST_ASSERT_NOT_NULL(lst);
@@ -75,13 +75,13 @@ void test_list_empty(void) {
 
 void test_list_cons(void)
 {
-  list lst = NULL;
-  list prev = NULL;
+  List *lst = NULL;
+  List *prev = NULL;
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     prev = lst;
     char* val = make_test_str(i);
-    lst = list_cons(lst, (gptr)val);
+    lst = list_cons(lst, (void *)val);
 
     /* test the data */
     TEST_ASSERT_EQUAL_STRING(val, (char*)lst->data);
@@ -92,11 +92,11 @@ void test_list_cons(void)
 
 void test_list_first(void)
 {
-  list lst = NULL;
+  List *lst = NULL;
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    lst = list_cons(lst, (gptr)val);
+    lst = list_cons(lst, (void *)val);
 
     /* test the data */
     TEST_ASSERT_EQUAL_STRING(val, list_first(lst));
@@ -105,13 +105,13 @@ void test_list_first(void)
 
 void test_list_rest(void)
 {
-  list lst = NULL;
-  list prev = NULL;
+  List *lst = NULL;
+  List *prev = NULL;
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     prev = lst;
     char* val = make_test_str(i);
-    lst = list_cons(lst, (gptr)val);
+    lst = list_cons(lst, (void *)val);
   }
 
   for (int i = TEST_ITERATIONS - 1; i > 0; i--) {
@@ -134,11 +134,11 @@ void test_list_rest(void)
 
 void test_list_count(void)
 {
-  list lst = NULL;
+  List *lst = NULL;
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    lst = list_cons(lst, (gptr)val);
+    lst = list_cons(lst, (void *)val);
 
     /* test the count changes as list grows */
     TEST_ASSERT_EQUAL_INT(i + 1, list_count(lst));
@@ -159,11 +159,11 @@ void test_list_nth(void)
 {
   srand((int)time(NULL));
 
-  list lst = NULL;
+  List *lst = NULL;
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    lst = list_cons(lst, (gptr)val);
+    lst = list_cons(lst, (void *)val);
   }
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
@@ -179,12 +179,12 @@ void test_list_nth(void)
 
 void test_list_reverse(void)
 {
-  list lst = NULL;
-  list rev = NULL;
+  List *lst = NULL;
+  List *rev = NULL;
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    lst = list_cons(lst, (gptr)val);
+    lst = list_cons(lst, (void *)val);
   }
 
   rev = list_reverse(lst);
@@ -192,7 +192,7 @@ void test_list_reverse(void)
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    lst = list_cons(lst, (gptr)val);
+    lst = list_cons(lst, (void *)val);
   }
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
@@ -215,7 +215,7 @@ void test_list_reverse(void)
   rev = NULL;
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    lst = list_cons(lst, (gptr)val);
+    lst = list_cons(lst, (void *)val);
   }
 
   /* reversing a reversed list has no effect */
@@ -225,12 +225,12 @@ void test_list_reverse(void)
 
 void test_list_copy(void)
 {
-  list lst = NULL;
-  list copy = NULL;
+  List *lst = NULL;
+  List *copy = NULL;
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    lst = list_cons(lst, (gptr)val);
+    lst = list_cons(lst, (void *)val);
   }
 
   copy = list_copy(lst);
@@ -250,20 +250,20 @@ void test_list_copy(void)
 
 void test_list_concatenate(void)
 {
-  list lst_1 = NULL;
-  list lst_2 = NULL;
-  list lst_cat = NULL;
+  List *lst_1 = NULL;
+  List *lst_2 = NULL;
+  List *lst_cat = NULL;
 
   /* data for first list */
   for (int i = (TEST_ITERATIONS / 4) - 1; i >= 0; i--) {
     char* val = make_test_str(i);
-    lst_1 = list_cons(lst_1, (gptr)val);
+    lst_1 = list_cons(lst_1, (void *)val);
   }
 
   /* data for second list */
   for (int i = (TEST_ITERATIONS / 2) - 1; i >= (TEST_ITERATIONS / 4); i--) {
     char* val = make_test_str(i);
-    lst_2 = list_cons(lst_2, (gptr)val);
+    lst_2 = list_cons(lst_2, (void *)val);
   }
 
   lst_cat = list_concatenate(lst_1, lst_2);
@@ -279,7 +279,7 @@ void test_list_concatenate(void)
   }
 
   /* concatenating an empty list returns a copy of the original list */
-  list lst = list_make("val");
+  List *lst = list_make("val");
 
   lst_cat = list_concatenate(lst, NULL);
   TEST_ASSERT_EQUAL_STRING("val", (char*)lst_cat->data);
@@ -295,11 +295,11 @@ void test_list_find(void)
 {
   srand((int)time(NULL));
 
-  list lst = NULL;
+  List *lst = NULL;
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    lst = list_cons(lst, (gptr)val);
+    lst = list_cons(lst, (void *)val);
   }
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
@@ -320,16 +320,16 @@ void test_list_find(void)
 
 void test_list_iterator(void) {
 
-  list lst = NULL;
+  List *lst = NULL;
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
     char* val = make_test_str(i);
-    lst = list_cons(lst, (gptr)val);
+    lst = list_cons(lst, (void *)val);
   }
 
   /* make an interator */
-  iterator iter = list_iterator_make(lst);
+  Iterator *iter = list_iterator_make(lst);
 
   int i = TEST_ITERATIONS;
   while(iter) {

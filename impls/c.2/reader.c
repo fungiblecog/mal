@@ -27,9 +27,9 @@
 #define SYMBOL_DEREF "deref"
 #define SYMBOL_WITH_META "with-meta"
 
-Reader* reader_make(long token_capacity) {
+Reader *reader_make(long token_capacity) {
 
-  Reader* reader = GC_MALLOC(sizeof(*reader));
+  Reader *reader = GC_MALLOC(sizeof(*reader));
 
   reader->max_tokens = token_capacity;
   reader->position = 0;
@@ -40,7 +40,7 @@ Reader* reader_make(long token_capacity) {
   return reader;
 }
 
-Reader* reader_append(Reader* reader, Token* token) {
+Reader *reader_append(Reader *reader, Token *token) {
 
   if (reader->token_count < reader->max_tokens) {
 
@@ -57,14 +57,14 @@ Reader* reader_append(Reader* reader, Token* token) {
   return reader;
 }
 
-Token* reader_peek(const Reader* reader) {
+Token *reader_peek(const Reader *reader) {
 
   return (reader->token_data[reader->position]);
 }
 
-Token* reader_next(Reader* reader) {
+Token *reader_next(Reader *reader) {
 
-  Token* tok = reader->token_data[reader->position];
+  Token *tok = reader->token_data[reader->position];
 
   if (reader->position == -1) {
     return NULL;
@@ -79,10 +79,9 @@ Token* reader_next(Reader* reader) {
   }
 }
 
-void reader_print(Reader* reader) {
+void reader_print(Reader *reader) {
   /* NOTE: needed for debugging the reader only */
-
-  Token* tok;
+  Token *tok;
 
   for (long i = 0; i < reader->token_count; i++) {
 
@@ -125,9 +124,9 @@ void reader_print(Reader* reader) {
   }
 }
 
-MalType* read_str(char* token_string) {
+MalType *read_str(char *token_string) {
 
-  Reader* reader = tokenize(token_string);
+  Reader *reader = tokenize(token_string);
 
   if (reader->error) {
     return make_error_fmt("Reader error: %s", reader->error);
@@ -140,15 +139,15 @@ MalType* read_str(char* token_string) {
   }
 }
 
-Reader* tokenize(char* token_string) {
+Reader *tokenize(char *token_string) {
 
   /* allocate enough space for a Reader */
   /* TODO: over-allocates space */
-  Reader* reader = reader_make(strlen(token_string));
+  Reader *reader = reader_make(strlen(token_string));
 
-  for (char* next = token_string; *next != '\0';) {
+  for (char *next = token_string; *next != '\0';) {
 
-    Token* token = NULL;
+    Token *token = NULL;
 
     switch (*next) {
       /* skip whitespace */
@@ -250,18 +249,18 @@ Reader* tokenize(char* token_string) {
   return reader;
 }
 
-char* read_fixed_length_token(char* current, Token** ptoken, int n) {
+char *read_fixed_length_token(char *current, Token **ptoken, int n) {
 
   *ptoken = token_allocate(current, n, TOKEN_SPECIAL_CHARACTER, NULL);
   return (current + n);
 }
 
-char* read_terminated_token (char* current, Token** ptoken, int token_type) {
+char *read_terminated_token (char *current, Token **ptoken, int token_type) {
 
-  static char* const terminating_characters = " ,[](){};\n";
+  static char *const terminating_characters = " ,[](){};\n";
 
   /* search for first terminating character */
-  char* end = strpbrk(current, terminating_characters);
+  char *end = strpbrk(current, terminating_characters);
 
   /* if terminating character is not found it implies the end of the string */
   long token_length = !end ? strlen(current) : (end - current);
@@ -271,9 +270,9 @@ char* read_terminated_token (char* current, Token** ptoken, int token_type) {
   return (current + token_length);
 }
 
-char* read_symbol_token (char* current, Token** ptoken) {
+char *read_symbol_token (char *current, Token **ptoken) {
 
-  char* next = read_terminated_token(current, ptoken, TOKEN_SYMBOL);
+  char *next = read_terminated_token(current, ptoken, TOKEN_SYMBOL);
 
   /* check for reserved symbols */
   if (strcmp((*ptoken)->data, SYMBOL_NIL) == 0) {
@@ -291,17 +290,17 @@ char* read_symbol_token (char* current, Token** ptoken) {
 }
 
 
-char* read_keyword_token (char* current, Token** ptoken) {
+char *read_keyword_token (char *current, Token **ptoken) {
 
   /* TODO: check for invalid characters */
   return read_terminated_token(current + 1, ptoken, TOKEN_KEYWORD);
 }
 
-char* read_number_token(char* current, Token** ptoken) {
+char *read_number_token(char *current, Token **ptoken) {
 
   int has_decimal_point = 0;
 
-  char* next = read_terminated_token(current, ptoken, TOKEN_INTEGER);
+  char *next = read_terminated_token(current, ptoken, TOKEN_INTEGER);
   long token_length = next - current;
 
   /* first char is either digit or '+' or '-'
@@ -325,7 +324,7 @@ char* read_number_token(char* current, Token** ptoken) {
   return next;
 }
 
-char* read_string_token(char* current, Token** ptoken) {
+char *read_string_token(char *current, Token **ptoken) {
 
   char *start, *end, *error = NULL;
   long token_length = 0;
@@ -348,7 +347,7 @@ char* read_string_token(char* current, Token** ptoken) {
        searching from the next character */
     else if ( *(end - 1) == '\\') {
 
-      char* back_ptr = end - 1;
+      char *back_ptr = end - 1;
       while (*back_ptr == '\\') {
         /* back up to count the escape characters '\' */
         back_ptr--;
@@ -374,17 +373,17 @@ char* read_string_token(char* current, Token** ptoken) {
     }
   }
 
-  char* unescaped_string = unescape_string(current + 1, token_length);
+  char *unescaped_string = unescape_string(current + 1, token_length);
   *ptoken = token_allocate(unescaped_string, strlen(unescaped_string), TOKEN_STRING, error);
 
   return (end + 1);
 }
 
-char* read_comment_token(char* current, Token** ptoken) {
+char *read_comment_token(char *current, Token **ptoken) {
   /* comment includes all remaining characters to the next newline */
 
   /* search for newline character */
-  char* end = strchr(current, 0x0A);
+  char *end = strchr(current, 0x0A);
 
   /* if newline is not found it implies the end of string is reached */
   long token_chars = !end ? strlen(current) : (end - current);
@@ -395,11 +394,11 @@ char* read_comment_token(char* current, Token** ptoken) {
   return (current + token_chars + 1);
 }
 
-MalType* read_form(Reader* reader) {
+MalType *read_form(Reader *reader) {
 
   if (reader->token_count > 0) {
 
-    Token* tok = reader_peek(reader);
+    Token *tok = reader_peek(reader);
     if (tok->type == TOKEN_SPECIAL_CHARACTER) {
 
       switch(tok->data[0]) {
@@ -446,12 +445,12 @@ MalType* read_form(Reader* reader) {
           reader_next(reader);
 
           /* grab the components of the list */
-          MalType* symbol = make_symbol(SYMBOL_WITH_META);
-          MalType* first_form = read_form(reader);
-          MalType* second_form = read_form(reader);
+          MalType *symbol = make_symbol(SYMBOL_WITH_META);
+          MalType *first_form = read_form(reader);
+          MalType *second_form = read_form(reader);
 
           /* push the symbol and the following forms onto a list */
-          list lst = NULL;
+          List *lst = NULL;
           lst = list_cons(lst, symbol);
           lst = list_cons(lst, second_form);
           lst = list_cons(lst, first_form);
@@ -475,10 +474,10 @@ MalType* read_form(Reader* reader) {
   }
 }
 
-MalType* read_list(Reader* reader) {
+MalType *read_list(Reader *reader) {
 
-  Token* tok = reader_next(reader);
-  list lst = NULL;
+  Token *tok = reader_next(reader);
+  List *lst = NULL;
 
   if (reader_peek(reader)->data[0] == ')') {
     reader_next(reader);
@@ -487,8 +486,8 @@ MalType* read_list(Reader* reader) {
   else {
     while (tok->data[0] != ')') {
 
-        MalType* val = read_form(reader);
-        lst = list_cons(lst, (gptr)val);
+        MalType *val = read_form(reader);
+        lst = list_cons(lst, (void *)val);
 
         tok = reader_peek(reader);
 
@@ -502,10 +501,10 @@ MalType* read_list(Reader* reader) {
   }
 }
 
-MalType* read_vector(Reader* reader) {
+MalType *read_vector(Reader *reader) {
 
-  Token* tok = reader_next(reader);
-  vector vec = vector_make();
+  Token *tok = reader_next(reader);
+  Vector *vec = vector_make();
 
   if (reader_peek(reader)->data[0] == ']') {
     reader_next(reader);
@@ -514,8 +513,8 @@ MalType* read_vector(Reader* reader) {
   else {
     while (tok->data[0] != ']') {
 
-      MalType* val = read_form(reader);
-      vec = vector_push(vec, (gptr)val);
+      MalType *val = read_form(reader);
+      vec = vector_push(vec, (void *)val);
 
       tok = reader_peek(reader);
 
@@ -529,10 +528,10 @@ MalType* read_vector(Reader* reader) {
   }
 }
 
-MalType* read_hashmap(Reader* reader) {
+MalType *read_hashmap(Reader *reader) {
 
-  Token* tok = reader_next(reader);
-  hashmap map = hashmap_make(cmp_chars);
+  Token *tok = reader_next(reader);
+  Hashmap *map = hashmap_make(cmp_maltypes);
 
   if (reader_peek(reader)->data[0] == '}') {
     reader_next(reader);
@@ -541,30 +540,25 @@ MalType* read_hashmap(Reader* reader) {
   else {
     while (tok->data[0] != '}') {
 
-      MalType* key = read_form(reader);
-      MalType* val = NULL;
+      MalType *key = read_form(reader);
+      tok = reader_peek(reader);
+      if (!tok) { return make_error("Reader error: unbalanced braces '{}'"); }
+
+      MalType *val = read_form(reader);
+      map = hashmap_assoc(map, key, val);
 
       tok = reader_peek(reader);
-      if (!tok) {
-        return make_error("Reader error: unbalanced braces '{}'");
-      }
-
-      val = read_form(reader);
-      map = hashmap_put(map, (gptr)key, (gptr)val);
-
-      tok = reader_peek(reader);
-      if (!tok) {
-        return make_error("Reader error: unbalanced braces '{}'");
-      }
+      if (!tok) { return make_error("Reader error: unbalanced braces '{}'"); }
     }
     reader_next(reader);
+
     return make_hashmap(map);
   }
 }
 
-MalType* read_atom(Reader* reader) {
+MalType *read_atom(Reader *reader) {
 
-  Token* tok = reader_next(reader);
+  Token *tok = reader_next(reader);
 
   switch (tok->type) {
 
@@ -612,10 +606,10 @@ MalType* read_atom(Reader* reader) {
   return make_error("Reader error: Unknown atom type");
 }
 
-MalType* make_symbol_list(Reader* reader, char* symbol_name) {
+MalType *make_symbol_list(Reader *reader, char *symbol_name) {
 
   reader_next(reader);
-  list lst = NULL;
+  List *lst = NULL;
 
   /* push the symbol and the following form onto the list */
   lst = list_cons(lst, make_symbol(symbol_name));
@@ -624,17 +618,17 @@ MalType* make_symbol_list(Reader* reader, char* symbol_name) {
   return make_list(list_reverse(lst));
 }
 
-Token* token_allocate(char* str, long num_chars, int type, char* error) {
+Token *token_allocate(char *str, long num_chars, int type, char *error) {
 
   /* allocate space for the string - include space for null byte */
-  char* data = GC_MALLOC(sizeof(*data) * num_chars + 1);
+  char *data = GC_MALLOC(sizeof(*data) * num_chars + 1);
   /* copy num_chars characters into data */
   strncpy (data, str, num_chars);
   /* manually add the null byte */
   data[num_chars] = '\0';
 
   /* allocate space for the token struct */
-  Token* token = GC_MALLOC(sizeof(*token));
+  Token *token = GC_MALLOC(sizeof(*token));
   token->data = data;
   token->type = type;
   token->error = error;
@@ -642,9 +636,9 @@ Token* token_allocate(char* str, long num_chars, int type, char* error) {
   return token;
 }
 
-char* unescape_string(char* str, long length) {
+char *unescape_string(char *str, long length) {
 
-  char* dest = GC_MALLOC(sizeof(*dest)*length + 1);
+  char *dest = GC_MALLOC(sizeof(*dest)*length + 1);
 
   long j = 0;
   for (long i = 0; i < length; i++) {

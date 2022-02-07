@@ -7,28 +7,27 @@
 #define PROMPT_STRING "user> "
 
 
-char* READ(char* str) {
+char *READ(char *str) {
 
   return str;
 }
 
-char* EVAL(char* str) {
+char *EVAL(char *str) {
 
   return str;
 }
 
-void PRINT(char* str) {
+void PRINT(char *str) {
 
   printf("%s\n", str);
 }
 
-void rep(char* str) {
+void rep(char *str) {
 
   PRINT(EVAL(READ(str)));
 }
 
-
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 
   /* Greeting message */
   puts("Make-a-lisp version 0.0.1\n");
@@ -38,7 +37,7 @@ int main(int argc, char** argv) {
 
     /* print prompt and get input*/
     /* readline allocates memory for input */
-    char* input = readline(PROMPT_STRING);
+    char *input = readline(PROMPT_STRING);
 
     /* Check for EOF (Ctrl-D) */
     if (!input) {

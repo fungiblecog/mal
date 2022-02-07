@@ -1,5 +1,5 @@
 #include "../../unity/src/unity.h"
-#include "../vector.h"
+#include "../src/vector.h"
 #include "gc.h"
 
 /* included for time and rand functions */
@@ -12,7 +12,7 @@
 /* number of items to add to test lists */
 #define TEST_ITERATIONS 100
 
-vector vector_reverse(vector vec);
+Vector *vector_reverse(Vector *vec);
 
 /* utility functions */
 char *make_test_str(int i) {
@@ -33,11 +33,8 @@ void tearDown(void) {
 /* tests */
 void test_vector_make(void)
 {
-  vector vec = NULL;
-
   /* empty create vector */
-
-  vec = vector_make();
+  Vector *vec = vector_make();
 
   TEST_ASSERT_EQUAL_INT(0, vector_count(vec));
   TEST_ASSERT_EQUAL_INT(1, vector_empty(vec));
@@ -45,11 +42,11 @@ void test_vector_make(void)
 
 void test_vector_push(void)
 {
-  vector vec = vector_make();
+  Vector *vec = vector_make();
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    vec = vector_push(vec, (gptr)val);
+    vec = vector_push(vec, (void *)val);
     /* check data at each index */
     TEST_ASSERT_EQUAL_STRING(val, (char*)vector_get(vec, i));
   }
@@ -63,11 +60,11 @@ void test_vector_push(void)
 
 void test_vector_pop(void)
 {
-  vector vec = vector_make();
+  Vector *vec = vector_make();
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    vec = vector_push(vec, (gptr)val);
+    vec = vector_push(vec, (void *)val);
   }
 
   for (int i = TEST_ITERATIONS - 1; i >= 0; i--) {
@@ -89,11 +86,11 @@ void test_vector_get(void)
 {
   srand((int)time(NULL));
 
-  vector vec = vector_make();
+  Vector *vec = vector_make();
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    vec = vector_push(vec, (gptr)val);
+    vec = vector_push(vec, (void *)val);
   }
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
@@ -109,11 +106,11 @@ void test_vector_get(void)
 
 void test_vector_set(void) {
 
-  vector vec = vector_make();
+  Vector *vec = vector_make();
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    vec = vector_push(vec, (gptr)val);
+    vec = vector_push(vec, (void *)val);
   }
 
   /* test out of bounds */
@@ -126,7 +123,7 @@ void test_vector_set(void) {
   /* in bounds */
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = "updated";
-    vec = vector_set(vec, i, (gptr)val);
+    vec = vector_set(vec, i, (void *)val);
     TEST_ASSERT_EQUAL_STRING(val, vector_get(vec,i));
   }
 }
@@ -134,29 +131,28 @@ void test_vector_set(void) {
 void test_vector_empty(void) {
 
   /* test empty vector */
-  vector vec = vector_make();
+  Vector *vec = vector_make();
 
   TEST_ASSERT_NOT_NULL(vec);
   TEST_ASSERT_EQUAL_INT(1, vector_empty(vec));
 
   /* test non-empty vector */
-  vec = vector_push(vec, (gptr)"data");
+  vec = vector_push(vec, (void *)"data");
   TEST_ASSERT_EQUAL_INT(0, vector_empty(vec));
 }
 
 void test_vector_count(void)
 {
-  vector vec = vector_make();
+  Vector *vec = vector_make();
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    vec = vector_push(vec, (gptr)val);
+    vec = vector_push(vec, (void *)val);
     /* check size as vector increases */
     TEST_ASSERT_EQUAL_INT(i + 1, vector_count(vec));
   }
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
-    char* val = make_test_str(i);
     /* check size as vector decreases */
     TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS - i, vector_count(vec));
     vec = vector_pop(vec);
@@ -165,14 +161,14 @@ void test_vector_count(void)
 
 void test_vector_copy(void)
 {
-  vector vec = vector_make();
+  Vector *vec = vector_make();
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
     char* val = make_test_str(i);
-    vec = vector_push(vec, (gptr)val);
+    vec = vector_push(vec, (void *)val);
   }
 
-  vector copy = vector_copy(vec);
+  Vector *copy = vector_copy(vec);
 
   /* check size and count are the same in copy */
   TEST_ASSERT_EQUAL_INT(vec->size, copy->size);
@@ -201,16 +197,16 @@ void test_vector_copy(void)
 
 void test_vector_iterator(void) {
 
-  vector vec = vector_make();
+  Vector *vec = vector_make();
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
     char* val = make_test_str(i);
-    vec = vector_push(vec, (gptr)val);
+    vec = vector_push(vec, (void *)val);
   }
 
   /* make an interator */
-  iterator iter = vector_iterator_make(vec);
+  Iterator *iter = vector_iterator_make(vec);
 
   int i = 0;
   while(iter) {

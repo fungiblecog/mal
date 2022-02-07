@@ -9,14 +9,14 @@ SRC = reader.c printer.c types.c env.c core.c
 HEADERS = reader.h printer.h types.h env.h core.h
 
 LIB_DIR = ./libs
-LIB_LIST_H = $(LIB_DIR)/list/list.h
-LIB_LIST_SRC = $(LIB_DIR)/list/list.c
+LIB_LIST_H = $(LIB_DIR)/list/src/list.h
+LIB_LIST_SRC = $(LIB_DIR)/list/src/list.c
 
-LIB_MAP_H = $(LIB_DIR)/hashmap/hashmap.h
-LIB_MAP_SRC = $(LIB_DIR)/hashmap/hashmap.c
+LIB_MAP_H = $(LIB_DIR)/hashmap/src/hashmap.h
+LIB_MAP_SRC = $(LIB_DIR)/hashmap/src/hashmap.c
 
-LIB_VEC_H = $(LIB_DIR)/vector/vector.h
-LIB_VEC_SRC = $(LIB_DIR)/vector/vector.c
+LIB_VEC_H = $(LIB_DIR)/vector/src/vector.h
+LIB_VEC_SRC = $(LIB_DIR)/vector/src/vector.c
 
 LIB_ITER_H = $(LIB_DIR)/iterator/iterator.h
 LIB_ITER_SRC = $(LIB_DIR)/iterator/iterator.c

@@ -5,7 +5,7 @@
 # unity test framework source folder
 PATHU := ../unity/src/
 # project source folder(s) (space separated)
-PATHS := ./ ../iterator/
+PATHS := ./src/ ../iterator/
 # project test source folder
 PATHT := ./test/
 

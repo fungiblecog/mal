@@ -16,17 +16,17 @@
 
 #define PROMPT_STRING "user> "
 
-MalType* READ(char* str) {
+MalType *READ(char *str) {
 
   return read_str(str);
 }
 
-MalType* EVAL(MalType* ast, Env* env) {
+MalType *EVAL(MalType *ast, Env *env) {
 
   /* forward references */
-  MalType* eval_ast(MalType* ast, Env* env);
-  MalType* eval_defbang(MalType* ast, Env* env);
-  MalType* eval_letstar(MalType* ast, Env* env);
+  MalType *eval_ast(MalType *ast, Env *env);
+  MalType *eval_defbang(MalType *ast, Env *env);
+  MalType *eval_letstar(MalType *ast, Env *env);
 
   /* NULL */
   if (!ast) { return make_nil(); }
@@ -38,8 +38,8 @@ MalType* EVAL(MalType* ast, Env* env) {
   if (ast->value.mal_list == NULL) { return ast; }
 
   /* list */
-  MalType* first = (ast->value.mal_list)->data;
-  char* symbol = first->value.mal_symbol;
+  MalType *first = (ast->value.mal_list)->data;
+  char *symbol = first->value.mal_symbol;
 
   if (is_symbol(first)) {
 
@@ -52,13 +52,13 @@ MalType* EVAL(MalType* ast, Env* env) {
     }
   }
   /* first element is not a special symbol */
-  MalType* evaluated_list = eval_ast(ast, env);
+  MalType *evaluated_list = eval_ast(ast, env);
 
   if (is_error(evaluated_list)) { return evaluated_list; }
 
   /* apply the first element of the list to the arguments */
-  list evlst = evaluated_list->value.mal_list;
-  MalType* func = evlst->data;
+  List *evlst = evaluated_list->value.mal_list;
+  MalType *func = evlst->data;
 
   if (is_function(func)) {
     return (*func->value.mal_function)(evlst->next);
@@ -69,29 +69,29 @@ MalType* EVAL(MalType* ast, Env* env) {
   }
 }
 
-void PRINT(MalType* val) {
+void PRINT(MalType *val) {
 
-  char* output = pr_str(val, READABLY);
+  char *output = pr_str(val, READABLY);
   printf("%s\n", output);
 }
 
-void rep(char* str, Env* env) {
+void rep(char *str, Env *env) {
 
   PRINT(EVAL(READ(str), env));
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 
-  MalType* mal_add(list args);
-  MalType* mal_sub(list args);
-  MalType* mal_mul(list args);
-  MalType* mal_div(list args);
+  MalType *mal_add(List *args);
+  MalType *mal_sub(List *args);
+  MalType *mal_mul(List *args);
+  MalType *mal_div(List *args);
 
   /* Greeting message */
   puts("Make-a-lisp version 0.0.3\n");
   puts("Press Ctrl+d to exit\n");
 
-  Env* repl_env = env_make(NULL, NULL, NULL, NULL);
+  Env *repl_env = env_make(NULL, NULL, NULL, NULL);
   repl_env = env_set_C_fn(repl_env, "+", mal_add);
   repl_env = env_set_C_fn(repl_env, "-", mal_sub);
   repl_env = env_set_C_fn(repl_env, "*", mal_mul);
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
 
     /* print prompt and get input*/
     /* readline allocates memory for input */
-    char* input = readline(PROMPT_STRING);
+    char *input = readline(PROMPT_STRING);
 
     /* Check for EOF (Ctrl-D) */
     if (!input) {
@@ -122,16 +122,16 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-MalType* eval_ast(MalType* ast, Env* env) {
+MalType *eval_ast(MalType *ast, Env *env) {
 
   /* forward references */
-  MalType *evaluate_list(list lst, Env* env);
-  MalType *evaluate_vector(vector vec, Env* env);
-  MalType * evaluate_hashmap(hashmap map, Env* env);
+  MalType *evaluate_list(List *lst, Env *env);
+  MalType *evaluate_vector(Vector *vec, Env *env);
+  MalType *evaluate_hashmap(Hashmap *map, Env *env);
 
   if (is_symbol(ast)) {
 
-    MalType* symbol_value = env_get(env, ast);
+    MalType *symbol_value = env_get(env, ast);
 
     if (symbol_value) {
       return symbol_value;
@@ -156,15 +156,15 @@ MalType* eval_ast(MalType* ast, Env* env) {
   }
 }
 
-MalType* eval_defbang(MalType* ast, Env* env) {
+MalType *eval_defbang(MalType *ast, Env *env) {
 
-  list lst = (ast->value.mal_list)->next;
+  List *lst = (ast->value.mal_list)->next;
 
   /* TODO: Check the number and types of parameters */
-  MalType* defbang_symbol = lst->data;
-  MalType* defbang_value = lst->next->data;
+  MalType *defbang_symbol = lst->data;
+  MalType *defbang_value = lst->next->data;
 
-  MalType* result = EVAL(defbang_value, env);
+  MalType *result = EVAL(defbang_value, env);
 
   if (!is_error(result)) {
     env_set(env, defbang_symbol, result);
@@ -172,16 +172,16 @@ MalType* eval_defbang(MalType* ast, Env* env) {
   return result;
 }
 
-MalType* eval_letstar(MalType* ast, Env* env) {
+MalType *eval_letstar(MalType *ast, Env *env) {
 
-  list lst = ast->value.mal_list;
+  List *lst = ast->value.mal_list;
   lst = lst->next;
 
   /* TODO: Check the bindings list is valid, has an even number of elements, etc */
-  Env* letstar_env = env_make(env, NULL, NULL, NULL);
+  Env *letstar_env = env_make(env, NULL, NULL, NULL);
 
-  MalType* letstar_bindings = lst->data;
-  iterator letstar_bindings_iter = NULL;
+  MalType *letstar_bindings = lst->data;
+  Iterator *letstar_bindings_iter = NULL;
 
   /* bindings can be a list or vector */
   if (is_vector(letstar_bindings)) {
@@ -194,23 +194,23 @@ MalType* eval_letstar(MalType* ast, Env* env) {
   /* evaluate the bindings */
   while (letstar_bindings_iter) {
 
-    MalType* symbol = letstar_bindings_iter->value;
+    MalType *symbol = letstar_bindings_iter->value;
     letstar_bindings_iter = iterator_next(letstar_bindings_iter);
 
-    MalType* value = letstar_bindings_iter->value;
+    MalType *value = letstar_bindings_iter->value;
     letstar_env = env_set(letstar_env, symbol, EVAL(value, letstar_env));
 
     letstar_bindings_iter = iterator_next(letstar_bindings_iter);
   }
 
   /* evaluate the forms in the presence of bindings */
-  MalType* forms = lst->next->data;
+  MalType *forms = lst->next->data;
   return EVAL(forms, letstar_env);
 }
 
-MalType *evaluate_list(list lst, Env* env) {
+MalType *evaluate_list(List *lst, Env *env) {
 
-  list evlst = NULL;
+  List *evlst = NULL;
   while (lst) {
     evlst = list_cons(evlst, EVAL(lst->data, env));
     lst = lst->next;
@@ -218,10 +218,10 @@ MalType *evaluate_list(list lst, Env* env) {
   return make_list(list_reverse(evlst));
 }
 
-MalType *evaluate_vector(vector vec, Env* env) {
+MalType *evaluate_vector(Vector *vec, Env *env) {
 
-  iterator iter = vector_iterator_make(vec);
-  vector evec = vector_make();
+  Iterator *iter = vector_iterator_make(vec);
+  Vector *evec = vector_make();
 
   while (iter) {
     evec = vector_push(evec, EVAL(iter->value, env));
@@ -230,37 +230,37 @@ MalType *evaluate_vector(vector vec, Env* env) {
   return make_vector(evec);
 }
 
-MalType *evaluate_hashmap(hashmap map, Env* env) {
+MalType *evaluate_hashmap(Hashmap *map, Env *env) {
 
-  iterator iter = hashmap_iterator_make(map);
-  hashmap emap = hashmap_make(cmp_maltypes);
+  Iterator *iter = hashmap_iterator_make(map);
+  Hashmap *emap = hashmap_make(cmp_maltypes);
 
   while (iter) {
 
     /* keys are unevaluated */
-    MalType* key = iter->value;
+    MalType *key = iter->value;
     iter = iterator_next(iter);
 
     /* values are evaluated */
-    MalType* val = EVAL(iter->value, env);
+    MalType *val = EVAL(iter->value, env);
 
-    emap = hashmap_put(emap, key, val);
+    emap = hashmap_assoc(emap, key, val);
     iter = iterator_next(iter);
   }
   return make_hashmap(emap);
 }
 
-MalType* mal_add(list args) {
+MalType *mal_add(List *args) {
 
-  MalType* result = GC_MALLOC(sizeof(*result));
+  MalType *result = GC_MALLOC(sizeof(*result));
   result->type = MALTYPE_INTEGER;
 
-  list arg_list = args;
+  List *arg_list = args;
 
   long sum = 0;
   while(arg_list) {
 
-    MalType* val = arg_list->data;
+    MalType *val = arg_list->data;
     /* TODO: check argument type */
 
     sum = sum + val->value.mal_integer;
@@ -272,23 +272,23 @@ MalType* mal_add(list args) {
   return result;
 }
 
-MalType* mal_sub(list args) {
+MalType *mal_sub(List *args) {
 
   long sum;
-  MalType* result = GC_MALLOC(sizeof(*result));
+  MalType *result = GC_MALLOC(sizeof(*result));
   result->type = MALTYPE_INTEGER;
 
-  list arg_list = args;
+  List *arg_list = args;
   if (arg_list) {
 
-    MalType* first_val = arg_list->data;
+    MalType *first_val = arg_list->data;
     arg_list = arg_list->next;
     /* TODO: check argument type */
 
     sum = first_val->value.mal_integer;
     while(arg_list) {
 
-      MalType* val = arg_list->data;
+      MalType *val = arg_list->data;
       /* TODO: check argument type */
 
       sum = sum - val->value.mal_integer;
@@ -304,17 +304,17 @@ MalType* mal_sub(list args) {
   return result;
 }
 
-MalType* mal_mul(list args) {
+MalType *mal_mul(List *args) {
 
-  MalType* result = GC_MALLOC(sizeof(*result));
+  MalType *result = GC_MALLOC(sizeof(*result));
   result->type = MALTYPE_INTEGER;
 
-  list arg_list = args;
+  List *arg_list = args;
 
   long product = 1;
   while(arg_list) {
 
-    MalType* val = arg_list->data;
+    MalType *val = arg_list->data;
     /* TODO: check argument type */
 
     product *= val->value.mal_integer;
@@ -326,23 +326,23 @@ MalType* mal_mul(list args) {
   return result;
 }
 
-MalType* mal_div(list args) {
+MalType *mal_div(List *args) {
 
   long product;
-  MalType* result = GC_MALLOC(sizeof(*result));
+  MalType *result = GC_MALLOC(sizeof(*result));
   result->type = MALTYPE_INTEGER;
 
-  list arg_list = args;
+  List *arg_list = args;
 
   if (arg_list) {
-    MalType* first_val = arg_list->data;
+    MalType *first_val = arg_list->data;
     /* TODO: check argument type */
     product = first_val->value.mal_integer;
     arg_list = arg_list->next;
 
     while(arg_list) {
 
-      MalType* val = arg_list->data;
+      MalType *val = arg_list->data;
       /* TODO: check argument type */
 
     product /= (val->value.mal_integer);

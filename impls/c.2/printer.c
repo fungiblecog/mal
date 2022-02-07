@@ -16,14 +16,14 @@
 #define LIST_BUFFER_SIZE 1024
 
 /* forward references */
-char* pr_str_sequential(iterator iter, int readably, char* start_delimiter, \
-                        char* end_delimiter, char* separator);
-char* pr_str_list(list lst, int readably);
-char* pr_str_vector(vector vec, int readably);
-char* pr_str_hashmap(hashmap map, int readably);
-char* escape_string(char* str);
+char *pr_str_sequential(Iterator *iter, int readably, char *start_delimiter, \
+                        char *end_delimiter, char *separator);
+char *pr_str_list(List *lst, int readably);
+char *pr_str_vector(Vector *vec, int readably);
+char *pr_str_hashmap(Hashmap *map, int readably);
+char *escape_string(char *str);
 
-char* pr_str(MalType* val, int readably) {
+char *pr_str(MalType *val, int readably) {
 
   if (!val) { return ""; }
 
@@ -91,22 +91,23 @@ char* pr_str(MalType* val, int readably) {
 
   case MALTYPE_FUNCTION:
 
-    return snprintfbuf(FUNCTION_BUFFER_SIZE, "#<function::native@%p>", val->value.mal_function);
+    return snprintfbuf(FUNCTION_BUFFER_SIZE, "#<function::native@%p>", \
+                       val->value.mal_function);
     break;
 
   case MALTYPE_CLOSURE:
     {
-      MalType* definition = (val->value.mal_closure)->definition;
-      MalType* parameters = (val->value.mal_closure)->parameters;
-      MalType* more_symbol = (val->value.mal_closure)->more_symbol;
+      MalType *definition = (val->value.mal_closure)->definition;
+      MalType *parameters = (val->value.mal_closure)->parameters;
+      MalType *more_symbol = (val->value.mal_closure)->more_symbol;
 
-      list lst = parameters->value.mal_list;
-      MalType* args;
+      List *lst = parameters->value.mal_list;
+      MalType *args;
 
       /* to pretty print the more symbol it needs to be
          added to the end of the function argument list */
       if (more_symbol) {
-        char* symbol = snprintfbuf(STRING_BUFFER_SIZE, "%s%s", "&",     \
+        char *symbol = snprintfbuf(STRING_BUFFER_SIZE, "%s%s", "&",     \
                                    more_symbol->value.mal_symbol);
 
         args = make_list(list_concatenate(lst, list_make(make_symbol(symbol))));
@@ -147,10 +148,10 @@ char* pr_str(MalType* val, int readably) {
   }
 }
 
-char* pr_str_sequential(iterator iter, int readably, char* start_delimiter, \
-                        char* end_delimiter, char* separator) {
+char *pr_str_sequential(Iterator *iter, int readably, char *start_delimiter, \
+                        char *end_delimiter, char *separator) {
 
-  char* list_buffer = GC_MALLOC(sizeof(*list_buffer) * LIST_BUFFER_SIZE);
+  char *list_buffer = GC_MALLOC(sizeof(*list_buffer) * LIST_BUFFER_SIZE);
   long buffer_length = LIST_BUFFER_SIZE;
 
   /* add the start delimiter */
@@ -162,8 +163,8 @@ char* pr_str_sequential(iterator iter, int readably, char* start_delimiter, \
   while (iter) {
 
     /* concatenate next element */
-    MalType* data = iter->value;
-    char* str = pr_str(data, readably);
+    MalType *data = iter->value;
+    char *str = pr_str(data, readably);
 
     len = strlen(str);
     count += len;
@@ -203,30 +204,30 @@ char* pr_str_sequential(iterator iter, int readably, char* start_delimiter, \
   return list_buffer;
 }
 
-char* pr_str_list(list lst, int readably) {
+char *pr_str_list(List *lst, int readably) {
 
   return pr_str_sequential(list_iterator_make(lst), readably, "(", ")", " ");
 }
 
-char* pr_str_vector(vector vec, int readably) {
+char *pr_str_vector(Vector *vec, int readably) {
 
   return pr_str_sequential(vector_iterator_make(vec), readably, "[", "]", " ");
 }
 
-char* pr_str_hashmap(hashmap map, int readably) {
+char *pr_str_hashmap(Hashmap *map, int readably) {
 
   return pr_str_sequential(hashmap_iterator_make(map), readably, "{", "}", " ");
 }
 
-char* escape_string(char* str) {
+char *escape_string(char *str) {
 
   /* allocate a reasonable initial buffer size */
   long buffer_length = 2*(strlen(str) + 1);
-  char* buffer = GC_MALLOC(sizeof(*buffer) * buffer_length);
+  char *buffer = GC_MALLOC(sizeof(*buffer) * buffer_length);
 
   strcpy(buffer,"\"");
 
-  char* curr = str;
+  char *curr = str;
   while(*curr != '\0') {
 
     switch (*curr) {
@@ -264,7 +265,7 @@ char* escape_string(char* str) {
   return buffer;
 }
 
-char* snprintfbuf(long initial_size, char* fmt, ...) {
+char *snprintfbuf(long initial_size, char *fmt, ...) {
   /* this is just a wrapper for the *printf family that ensures the
      string is long enough to hold the contents */
 
@@ -277,7 +278,7 @@ char* snprintfbuf(long initial_size, char* fmt, ...) {
   va_copy(argptr_copy, argptr);
 
   /* allocate an initial buffer plus a char for the /0 */
-  char* buffer = GC_MALLOC(sizeof(*buffer) * initial_size + 1);
+  char *buffer = GC_MALLOC(sizeof(*buffer) * initial_size + 1);
 
   /* the return value from vsnprintf is the number of chars that actually need to be allocated
    which could be less than were provided in the buffer */

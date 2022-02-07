@@ -5,19 +5,19 @@
 #include "list.h"
 
 /* create a new 1 element list. note an empty list is just NULL */
-list list_make(gptr data_ptr) {
-  return list_cons(NULL, data_ptr);
+List *list_make(void *data) {
+  return list_cons(NULL, data);
 }
 
 /* returns true if list is empty (NULL) */
-int list_empty(list lst) {
+int list_empty(List *lst) {
   return (!lst);
 }
 
 /* return a list with an element added at the head */
-list list_cons(list lst, gptr val) {
+List *list_cons(List *lst, void *val) {
 
-  pair* head = GC_malloc(sizeof(pair));
+  pair *head = GC_malloc(sizeof(*head));
   head->data = val;
   head->next = lst;
 
@@ -25,17 +25,17 @@ list list_cons(list lst, gptr val) {
 }
 
 /* return the first element in the list (the head) */
-gptr list_first(list lst) {
+void *list_first(List *lst) {
   return (lst ? lst->data : NULL);
 }
 
 /* return a list of all emements except the head */
-list list_rest(list lst) {
+List *list_rest(List *lst) {
   return (lst ? lst->next : NULL);
 }
 
 /* return a count of the elements in the list */
-int list_count(list lst) {
+int list_count(List *lst) {
 
   /* handle empty case */
   if (!lst) { return 0; }
@@ -51,10 +51,10 @@ int list_count(list lst) {
 }
 
 /* return the nth element counting from the head */
-gptr list_nth(list lst, int n) {
+void *list_nth(List *lst, int n) {
 
   /* handle empty case */
-  if(!lst) { return NULL; }
+  if (!lst) { return NULL; }
 
   int idx = 0;
 
@@ -74,14 +74,14 @@ gptr list_nth(list lst, int n) {
 }
 
 /* return the list reversed *destructive* */
-list list_reverse(list lst) {
+List *list_reverse(List *lst) {
 
   /* list is not empty and has more than one element */
   if (lst && lst->next) {
 
     pair *prev = NULL, *next = NULL, *current = lst;
 
-    while(current) {
+    while (current) {
 
       /* stash current value of next pointer --> */
       next = current->next;
@@ -100,15 +100,15 @@ list list_reverse(list lst) {
 }
 
 /* return a new list with identical contents */
-list list_copy(list lst) {
+List *list_copy(List *lst) {
 
   /* handle empty case */
   if(!lst) { return NULL; }
 
-  list copy = NULL;
+  List *copy = NULL;
 
   /* walk the list */
-  while(lst) {
+  while (lst) {
 
     /* push the elements to the new list */
     copy = list_cons(copy, lst->data);
@@ -119,19 +119,19 @@ list list_copy(list lst) {
 }
 
 /* return a list which is the input lists joined together */
-list list_concatenate(list lst_1, list lst_2) {
+List *list_concatenate(List *lst_1, List *lst_2) {
 
   /* make a copy of the second list */
-  list lst_cat = NULL;
+  List *lst_cat = NULL;
   lst_cat = list_copy(lst_2);
 
   /* push the reverse of the first list onto the copy of the second list */
   lst_1 = list_reverse(lst_1);
 
-  list lst_iter = lst_1;
+  List *lst_iter = lst_1;
   while (lst_iter) {
 
-    gptr val = lst_iter->data;
+    void * val = lst_iter->data;
     lst_cat = list_cons(lst_cat, val);
     lst_iter = lst_iter->next;
   }
@@ -142,15 +142,15 @@ list list_concatenate(list lst_1, list lst_2) {
   /* return the concatenated list */
   return lst_cat;
 }
+
 /* return the position of the element matching
    keystring when fn is applied to the data */
-//int list_findf(list lst, char* keystring, char_fn fn) {
-int list_find(list lst, gptr val, cmp_fn fn) {
+int list_find(List *lst, void *val, cmp_fn fn) {
 
   /* handle empty cases */
   if (!lst || !val) { return -1; }
 
-  list current = lst;
+  List *current = lst;
   long ctr = 0;
   /* walk the list */
   while (current) {
@@ -169,11 +169,11 @@ int list_find(list lst, gptr val, cmp_fn fn) {
   return -1;
 }
 
-static iterator list_next_fn(iterator iter) {
+static Iterator *list_next_fn(Iterator *iter) {
   assert(iter != NULL);
 
   /* iter->current points to the current pair */
-  list current = iter->current;
+  List *current = iter->current;
 
   /* advance the pointer */
   current = current->next;
@@ -181,7 +181,7 @@ static iterator list_next_fn(iterator iter) {
   /* check for end of the list */
   if (!current) { return NULL; }
 
-  iterator new_iter = iterator_copy(iter);
+  Iterator *new_iter = iterator_copy(iter);
 
   /* set the next pair */
   new_iter->current = current;
@@ -193,13 +193,13 @@ static iterator list_next_fn(iterator iter) {
 }
 
 
-iterator list_iterator_make(list lst)
+Iterator *list_iterator_make(List *lst)
 {
   /* empty list returns a NULL iterator */
   if (!lst) { return NULL; }
 
   /* create an iterator */
-  iterator iter = GC_MALLOC(sizeof(*iter));
+  Iterator *iter = GC_MALLOC(sizeof(*iter));
 
   /* install the next function for a list */
   iter->next_fn = list_next_fn;
