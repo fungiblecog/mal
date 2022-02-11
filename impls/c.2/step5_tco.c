@@ -436,7 +436,7 @@ MalType *evaluate_vector(Vector *vec, Env *env) {
 MalType *evaluate_hashmap(Hashmap *map, Env *env) {
 
   Iterator *iter = hashmap_iterator_make(map);
-  Hashmap *emap = hashmap_make(cmp_maltypes);
+  Hashmap *emap = hashmap_make(NULL, cmp_maltypes, cmp_maltypes);;
 
   while (iter) {
 

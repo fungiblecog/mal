@@ -531,7 +531,7 @@ MalType *read_vector(Reader *reader) {
 MalType *read_hashmap(Reader *reader) {
 
   Token *tok = reader_next(reader);
-  Hashmap *map = hashmap_make(cmp_maltypes);
+  Hashmap *map = hashmap_make(NULL, cmp_maltypes, cmp_maltypes);
 
   if (reader_peek(reader)->data[0] == '}') {
     reader_next(reader);

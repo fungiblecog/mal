@@ -6,6 +6,7 @@
 
 #include <editline/readline.h>
 #include <editline/history.h>
+#define HISTORY_FILE ".mal-history"
 
 #include "types.h"
 #include "reader.h"
@@ -28,7 +29,7 @@
 #define SYMBOL_TRYSTAR "try*"
 #define SYMBOL_CATCHSTAR "catch*"
 
-#define PROMPT_STRING "user> "
+#define PROMPT_STRING "c2> "
 
 MalType *READ(char *str) {
 
@@ -256,7 +257,7 @@ int main(int argc, char **argv) {
     lst = list_cons(lst, make_string(argv[i]));
   }
   env_set(repl_env, make_symbol("*ARGV*"), make_list(list_reverse(lst)));
-  env_set(repl_env, make_symbol("*host-language*"), make_string("c.2"));
+  env_set(repl_env, make_symbol("*host-language*"), make_string("C2"));
 
   /* run in script mode if a filename is given */
   if (argc > 1) {
@@ -269,8 +270,10 @@ int main(int argc, char **argv) {
   else {
 
     /* Greeting message */
-    EVAL(READ("(println (str \"Mal [\" *host-language* \"]\"))"), repl_env);
+    EVAL(READ("(println (str \"Welcome to \" *host-language* \"\n\"))"), repl_env);
 
+    /* load a history file if it exists */
+    read_history(HISTORY_FILE);
     while (1) {
 
       /* print prompt and get input*/
@@ -288,6 +291,9 @@ int main(int argc, char **argv) {
 
       /* call Read-Eval-Print */
       rep(input, repl_env);
+
+      /* write out the history to a file */
+      write_history(HISTORY_FILE);
 
       /* have to release the memory used by readline */
       free(input);

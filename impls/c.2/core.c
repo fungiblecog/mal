@@ -104,7 +104,7 @@ ns *ns_make_core(void) {
 
   ns *core = GC_MALLOC(sizeof(*core));
 
-  Hashmap *core_functions = hashmap_make(cmp_chars);
+  Hashmap *core_functions = hashmap_make(NULL, NULL, NULL);
 
   /* arithmetic */
   core_functions = hashmap_assoc(core_functions, "+", mal_add);
@@ -1330,7 +1330,7 @@ MalType *mal_hash_map(List *args) {
     return make_error("'hashmap': odd number of arguments, expected key/value pairs");
   }
 
-  Hashmap *map = hashmap_make(cmp_maltypes);
+  Hashmap *map = hashmap_make(NULL, cmp_maltypes, cmp_maltypes);
 
   while (args) {
 

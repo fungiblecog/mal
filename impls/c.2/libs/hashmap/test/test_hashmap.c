@@ -1,7 +1,10 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <gc.h>
+
 #include "../../unity/src/unity.h"
-#include "../src/hashmap.h"
-#include "gc.h"
+#include "../include/hashmap.h"
 
 /* included for time and rand functions */
 #include <time.h>
@@ -11,7 +14,8 @@
 #define BUFFER_SIZE 32
 
 /* number of items to add to test lists */
-#define TEST_ITERATIONS 100
+#define TEST_ITERATIONS 10000
+#define TEST_ITERATIONS_COLLISIONS 1000
 
 /* utility functions */
 char *make_test_val (int i) {
@@ -28,39 +32,188 @@ char *make_test_key(int i) {
   return buf;
 }
 
-int cmp_chars(void *key1, void *key2) {
-  return (strcmp((char *)key1, (char *)key2) == 0);
+hash_t hash_str(void *obj) {
+
+  hash_t hash = 5381;
+
+  int c;
+  while ((c = *(char*)obj++)) {
+    hash = ((hash << 5) + hash) + c;
+  }
+  return hash;
 }
 
-char* char_val(void *data) {
-  return (char *)data;
+hash_t hash_collision(void *obj) {
+  return 5381;
 }
+
+hash_t hash_int(void *obj) {
+  return (uintptr_t)obj;
+}
+
+int equal_int(void *obj1, void *obj2) {
+  return ((uintptr_t)obj1 == (uintptr_t)obj2);
+}
+
+int equal_str(void *obj1, void *obj2) {
+  return (strcmp((char *)obj1, (char *)obj2) == 0);
+}
+
+/* test visit_fn */
+void counter_fn (void *key, void *val, void **result) {
+  uintptr_t *res_val = (uintptr_t *)(result);
+  (*res_val)++;
+}
+
+/* internal struct used by make_hashmap_iterator */
+struct list {
+ void *data;
+ struct list *next;
+};
+
+/* test visit_fn */
+void list_fn(void *key, void *val, void **acc) {
+
+  struct list *lst = *(struct list **)acc;
+
+  struct list *new_val = GC_MALLOC(sizeof(*new_val));
+  new_val->data = val;
+  new_val->next = lst;
+
+  struct list *new_key = GC_MALLOC(sizeof(*new_key));
+  new_key->data = key;
+  new_key->next = new_val;
+
+  *acc = new_key;
+}
+
 
 void setUp(void) {
-  /* set up global state here */
+  /* set stuff up here */
+  srand((int)time(NULL));
 }
 
 void tearDown(void) {
-  /* clean up global state here */
+  /* clean stuff up here */
 }
 
-/* tests */
-void test_hashmap_make(void)
-{
-  /* create a hashmap */
-  Hashmap *map = hashmap_make(cmp_chars);
+void test_hashmap_new(void) {
 
-  /* no elements */
-  TEST_ASSERT_EQUAL_INT(0, map->count);
-  /* no item in internal list */
-  TEST_ASSERT_NULL(map->head);
+  Hashmap *h0 = hashmap_make(hash_str, equal_str, equal_str);
+
+  /* no elements in fresh hashmap */
+  TEST_ASSERT_EQUAL_INT(0, hashmap_count(h0));
+  /* returns NULL when getting a non-existent element */
+  TEST_ASSERT_NULL(hashmap_get(h0, "key_1"));
+  /* dissoc on an empty hashmap returns the same hashmap */
+  TEST_ASSERT_EQUAL_INT(h0, hashmap_dissoc(h0, "key_1"));
 }
 
-void test_hashmap_get(void)
+void test_hashmap_assoc(void)
 {
-  srand((int)time(NULL));
+  Hashmap *map = hashmap_make(NULL, NULL, NULL);
 
-  Hashmap *map = hashmap_make(cmp_chars);
+  for (int i = 0; i < TEST_ITERATIONS; i++) {
+
+    char *key = make_test_key(i);
+    char *val = make_test_val(i);
+    map = hashmap_assoc(map, key, val);
+  }
+
+  /* check all keys/vals added */
+  TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS, hashmap_count(map));
+
+  /* check all the keys and vals are present */
+  for (int i = 0; i < TEST_ITERATIONS; i++) {
+
+    char* key = make_test_key(i);
+    char* val = make_test_val(i);
+
+    TEST_ASSERT_EQUAL_STRING(val, hashmap_get(map, key));
+  }
+
+  Hashmap *map0 = map;
+
+  /* test that present key/vals can be updated */
+  for (int i = 0; i < TEST_ITERATIONS; i++) {
+
+    int r = rand() % TEST_ITERATIONS;
+    char* key = make_test_key(r);
+    char* val = "updated";
+
+    if (hashmap_get(map, key)) {
+      map = hashmap_assoc(map, key, val);
+    }
+    /* test value is updated */
+    TEST_ASSERT_EQUAL_STRING(val, hashmap_get(map, key));
+
+    /* test all keys/values still there */
+    TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS, hashmap_count(map));
+  }
+
+  /* test that not present key/vals are added */
+  for (int i = 0; i < TEST_ITERATIONS; i++) {
+
+    char* key = make_test_key(i+2*TEST_ITERATIONS);
+    char* val = make_test_val(i+2*TEST_ITERATIONS);
+
+    map = hashmap_assoc(map, key, val);
+
+    /* check the value is updated */
+    TEST_ASSERT_EQUAL_STRING(val, hashmap_get(map, key));
+
+    /* check the element count */
+    TEST_ASSERT_EQUAL_INT((TEST_ITERATIONS+i+1), hashmap_count(map));
+  }
+
+  /* check the original map is unaffected */
+  for (int i = 0; i < TEST_ITERATIONS; i++) {
+
+    char* key = make_test_key(i);
+    char* val = make_test_val(i);
+
+    TEST_ASSERT_EQUAL_STRING(val, hashmap_get(map0, key));
+  }
+  TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS, hashmap_count(map0));
+}
+
+void test_hashmap_dissoc(void) {
+
+  Hashmap *map = hashmap_make(NULL, NULL, NULL);
+
+  for (int i = 0; i < TEST_ITERATIONS; i++) {
+
+    char* key = make_test_key(i);
+    char* val = make_test_val(i);
+    map = hashmap_assoc(map, key, val);
+  }
+
+  Hashmap *map0 = map;
+
+  /* remove keys at random */
+  for (int i = 0; i < TEST_ITERATIONS; i++) {
+
+    int r = rand() % TEST_ITERATIONS;
+    char* key_random = make_test_key(r);
+    map = hashmap_dissoc(map, key_random);
+
+    /* key no longer found */
+    TEST_ASSERT_NULL(hashmap_get(map, key_random));
+  }
+
+  /* original map unaffected */
+  for (int i = 0; i < TEST_ITERATIONS; i++) {
+
+    char* key = make_test_key(i);
+    char* val = make_test_val(i);
+    TEST_ASSERT_EQUAL_STRING(val, (char*)hashmap_get(map0, key));
+  }
+  TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS, hashmap_count(map0));
+}
+
+void test_hashmap_get(void) {
+
+  Hashmap *map = hashmap_make(NULL, NULL, NULL);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -83,70 +236,202 @@ void test_hashmap_get(void)
   }
 }
 
-void test_hashmap_assoc(void)
-{
-  srand((int)time(NULL));
+void test_hashmap_int_keys(void) {
 
-  Hashmap *map = hashmap_make(cmp_chars);
+  Hashmap *map = hashmap_make(hash_int, equal_int, equal_str);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
-    char* key = make_test_key(i);
-    char* val = make_test_val(i);
-    map = hashmap_assoc(map, key, val);
+    uintptr_t key = i;
+    char *val = make_test_val(i);
+    map = hashmap_assoc(map, (void*)key, val);
   }
   /* check all keys/vals added */
   TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS, hashmap_count(map));
 
-  /* check all the keys and vals are correct */
-  HashEntry *entry = map->head;
-  for (int i = TEST_ITERATIONS - 1; i >= 0; i--) {
+  /* check all the keys and vals are present */
+  for (int i = 0; i < TEST_ITERATIONS; i++) {
 
-    char* key = make_test_key(i);
+    uintptr_t key = i;
     char* val = make_test_val(i);
 
-    TEST_ASSERT_EQUAL_STRING(entry->key, key);
-    TEST_ASSERT_EQUAL_STRING(entry->val, val);
-
-    entry = entry->next;
-  }
-
-
-  /* test that present key/vals can be updated */
-  for (int i = 0; i < TEST_ITERATIONS; i++) {
-
-    int r = (rand() % TEST_ITERATIONS);
-    char* key = make_test_key(r);
-    char* val = "updated";
-
-    map = hashmap_assoc(map, key, val);
-
-    /* test value is updated */
-    TEST_ASSERT_EQUAL_STRING(val, hashmap_get(map, key));
-
-    /* test all keys/values still there */
-    TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS, hashmap_count(map));
-  }
-
-  /* test that not present key/vals are added */
-  for (int i = 0; i < TEST_ITERATIONS; i++) {
-
-    char* key = make_test_key(i+2*TEST_ITERATIONS);
-    char* val = make_test_val(i+2*TEST_ITERATIONS);
-
-    map = hashmap_assoc(map, key, val);
-
-    /* check the value is updated */
-    TEST_ASSERT_EQUAL_STRING(val, hashmap_get(map, key));
-
-    /* check the element count */
-    TEST_ASSERT_EQUAL_INT((TEST_ITERATIONS+i+1), hashmap_count(map));
+    TEST_ASSERT_EQUAL_STRING(val, hashmap_get(map, (void *)key));
   }
 }
 
-void test_hashmap_dissoc(void) {
+void test_hashmap_int_vals(void) {
 
-  Hashmap *map = hashmap_make(cmp_chars);
+  Hashmap *map = hashmap_make(hash_str, equal_str, equal_int);
+
+  TEST_ASSERT_EQUAL_INT(0, hashmap_count(map));
+
+  for (int i = 0; i < TEST_ITERATIONS; i++) {
+
+    char *key = make_test_key(i);
+    uintptr_t val = i;
+    map = hashmap_assoc(map, (void *)key, (void *)val);
+  }
+  /* check all keys/vals added */
+  TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS, hashmap_count(map));
+
+  /* check all the keys and vals are present */
+  for (int i = 0; i < TEST_ITERATIONS; i++) {
+
+    char *key = make_test_key(i);
+    uintptr_t val = i;
+
+    TEST_ASSERT_EQUAL_INT(val, hashmap_get(map, (void *)key));
+  }
+}
+
+void test_hashmap_count(void) {
+
+  Hashmap *map = hashmap_make(hash_int, equal_int, equal_int);
+
+  for (uintptr_t i = 1; i <= TEST_ITERATIONS; i++) {
+
+    map = hashmap_assoc(map, (void*)i, (void*)i);
+    TEST_ASSERT_EQUAL_INT(i, hashmap_count(map));
+  }
+
+  for (uintptr_t i = 1; i <= TEST_ITERATIONS; i++) {
+
+    map = hashmap_dissoc(map, (void*)i);
+    TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS - i, hashmap_count(map));
+  }
+}
+
+void test_hashmap_collisions(void) {
+
+  /* make a hashmap that is all collisions */
+  Hashmap *map = hashmap_make(hash_collision, equal_str, equal_str);
+  TEST_ASSERT_EQUAL_INT(0, hashmap_count(map));
+
+  for (int i = 0; i < TEST_ITERATIONS_COLLISIONS; i++) {
+
+    char *key = make_test_key(i);
+    char *val = make_test_val(i);
+    map = hashmap_assoc(map, (void *)key, (void *)val);
+  }
+  /* check all keys/vals added */
+  TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS_COLLISIONS, hashmap_count(map));
+
+  /* check all the keys and vals are present */
+  for (int i = 0; i < TEST_ITERATIONS_COLLISIONS; i++) {
+
+    char *key = make_test_key(i);
+    char *val = make_test_val(i);
+
+    TEST_ASSERT_EQUAL_STRING(val, hashmap_get(map, (void *)key));
+  }
+
+  /* save a copy */
+  Hashmap *map0 = map;
+
+  int added = 0;
+  /* test that present key/vals can be updated */
+  for (int i = 0; i < TEST_ITERATIONS_COLLISIONS; i++) {
+
+    int r = rand() % TEST_ITERATIONS_COLLISIONS;
+    char* key = make_test_key(r);
+    char* val = make_test_val(r);
+    char* new_val = "updated";
+
+    /* check it hasn't already been updated */
+    if (strcmp(val, (char*)hashmap_get(map, key)) == 0) {
+      added++;
+
+      /* update the value */
+      map = hashmap_assoc(map, key, new_val);
+      /* test value is updated */
+      TEST_ASSERT_EQUAL_STRING(new_val, (char*)hashmap_get(map, key));
+
+      /* test all keys/values still there */
+      TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS_COLLISIONS, hashmap_count(map));
+    }
+  }
+  /* check that some values have actually been added */
+  TEST_ASSERT_GREATER_THAN(TEST_ITERATIONS_COLLISIONS / 2, added);
+
+  /* check all the keys are present */
+  for (int i = 0; i < TEST_ITERATIONS_COLLISIONS; i++) {
+
+    char *key = make_test_key(i);
+    TEST_ASSERT_NOT_NULL(hashmap_get(map, (void *)key));
+  }
+
+  /* test that not present key/vals are added */
+  for (int i = 0; i < TEST_ITERATIONS_COLLISIONS; i++) {
+
+    char* key = make_test_key(i+2*TEST_ITERATIONS_COLLISIONS);
+    char* val = make_test_val(i+2*TEST_ITERATIONS_COLLISIONS);
+
+    map = hashmap_assoc(map, key, val);
+
+    /* check the value is added */
+    TEST_ASSERT_EQUAL_STRING(val, hashmap_get(map, key));
+
+    /* check the element count */
+    TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS_COLLISIONS + (i+1), hashmap_count(map));
+  }
+  TEST_ASSERT_EQUAL_INT(2*TEST_ITERATIONS_COLLISIONS, hashmap_count(map));
+
+  //   Hashmap *map1 = map0;
+
+  /* remove keys at random */
+  int removed = 0;
+  for (int i = 0; i < TEST_ITERATIONS_COLLISIONS; i++) {
+
+    int r = rand() % TEST_ITERATIONS_COLLISIONS;
+    char* key_random = make_test_key(r);
+
+    /* check it hasn't been removed already */
+    if (hashmap_get(map, key_random)) {
+      /* remove key */
+      removed++;
+      map = hashmap_dissoc(map, key_random);
+      /* key no longer found */
+      TEST_ASSERT_NULL(hashmap_get(map, key_random));
+    }
+  }
+  /* check that some values have actually been removed */
+  TEST_ASSERT_GREATER_THAN(TEST_ITERATIONS_COLLISIONS / 2, removed);
+
+  /* original map unaffected */
+  for (int i = 0; i < TEST_ITERATIONS_COLLISIONS; i++) {
+
+    char* key = make_test_key(i);
+    char* val = make_test_val(i);
+    TEST_ASSERT_EQUAL_STRING(val, (char*)hashmap_get(map0, key));
+  }
+  TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS_COLLISIONS, hashmap_count(map0));
+}
+
+void test_hashmap_visit_count(void) {
+
+  Hashmap *map = hashmap_make(hash_int, equal_int, equal_int);
+  uintptr_t result;
+
+  for (uintptr_t i = 1; i <= TEST_ITERATIONS; i++) {
+    result = 0;
+
+    map = hashmap_assoc(map, (void*)i, (void*)i);
+    hashmap_visit(map, counter_fn, (void*)&result);
+    TEST_ASSERT_EQUAL_INT(i, result);
+  }
+
+  for (uintptr_t i = 1; i <= TEST_ITERATIONS; i++) {
+    result = 0;
+
+    map = hashmap_dissoc(map, (void*)i);
+    hashmap_visit(map, counter_fn, (void*)&result);
+    TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS - i, result);
+  }
+}
+
+void test_hashmap_visit_list(void) {
+
+  Hashmap *map = hashmap_make(hash_str, equal_str, equal_str);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -155,17 +440,62 @@ void test_hashmap_dissoc(void) {
     map = hashmap_assoc(map, key, val);
   }
 
-  char* key_random = make_test_key(TEST_ITERATIONS/2);
-  map = hashmap_dissoc(map, key_random);
+  struct list *lst = NULL;
 
-  /* key no longer found */
-  TEST_ASSERT_NULL(hashmap_get(map, key_random));
-  TEST_ASSERT_EQUAL_INT(TEST_ITERATIONS - 1, hashmap_count(map));
+  hashmap_visit(map, list_fn, (void **)&lst);
+
+  /* the order of keys and vals is not guaranteed */
+  /* but keys come before vals */
+  int count = 0;
+  while (lst) {
+    char *key = (char *)lst->data;
+    lst = lst->next;
+    char *val = (char *)lst->data;
+    /* test the value matches that stored for the preceding key */
+    TEST_ASSERT_EQUAL_STRING(val, hashmap_get(map, key));
+
+    lst = lst->next;
+    count++;
+  }
+  TEST_ASSERT_EQUAL_INT(hashmap_count(map), count);
+}
+
+void test_hashmap_readme(void) {
+
+  /* create a hashmap by calling new with your functions for hash and equality */
+  Hashmap *h1 = hashmap_make(hash_str, equal_str, equal_str);
+
+  /* add a key/value pair */
+  h1 = hashmap_assoc(h1, "key_1", "val_1");
+
+  /* add another key/value pair */
+  h1 = hashmap_assoc(h1, "key_2", "val_2");
+
+  /* remove a key/value pair */
+  Hashmap *h2 = hashmap_dissoc(h1, "key_1");
+
+  /* get a value using the key */
+  char *val_h1 = hashmap_get(h1, "key_1");
+  TEST_ASSERT_EQUAL_STRING("val_1", val_h1);
+  // ==> "val_ha is: val_1" (h1 not affected by dissoc)
+
+  /* get a value using the key */
+  char *val_h2 = hashmap_get(h2, "key_1");
+  TEST_ASSERT_NULL(val_h2);
+  // ==> "val_ha is: (null)" (not found in h2)
+
+  int count_h1 = hashmap_count(h1);
+  TEST_ASSERT_EQUAL_INT(2, count_h1);
+  // ==> "count_h1 is: 2"
+
+  int count_h2 = hashmap_count(h2);
+  TEST_ASSERT_EQUAL_INT(1, count_h2);
+  // ==> "count_h2 is: 1"
 }
 
 void test_hashmap_iterator(void) {
 
-  Hashmap *map = hashmap_make(cmp_chars);
+  Hashmap *map  = hashmap_make(hash_str, equal_str, equal_str);
 
   for (int i = 0; i < TEST_ITERATIONS; i++) {
 
@@ -177,42 +507,50 @@ void test_hashmap_iterator(void) {
   /* make an interator */
   Iterator *iter = hashmap_iterator_make(map);
 
-  int i = TEST_ITERATIONS;
-  while(iter) {
-    i--;
+  /* check a valid iterator is returned */
+  TEST_ASSERT_NOT_NULL(iter);
 
-    char* key = make_test_key(i);
-    char* val = make_test_val(i);
+  int count = 0;
+  while (iter) {
 
     char* iter_key = (char*)iterator_value(iter);
     iter = iterator_next(iter);
+
+    /* check key exists */
+    TEST_ASSERT_NOT_NULL(hashmap_get(map, iter_key));
+
     char* iter_val = (char*)iterator_value(iter);
-
-    /* check iterator key/vals */
-    TEST_ASSERT_EQUAL_STRING(key, iter_key);
-    TEST_ASSERT_EQUAL_STRING(val, iter_val);
-
     iter = iterator_next(iter);
-   }
-    TEST_ASSERT_EQUAL_INT(0, i);
+
+    /* check val exists for key */
+    TEST_ASSERT_EQUAL_STRING(iter_val, hashmap_get(map, iter_key));
+    count++;
+  }
+  /* check the number of elements matches */
+  TEST_ASSERT_EQUAL_INT(hashmap_count(map), count);
 }
 
 
-/* run tests */
-int main(void)
-{
+int main(int argc, char **argv) {
+
   UNITY_BEGIN();
 
-  RUN_TEST(test_hashmap_make);
+  RUN_TEST(test_hashmap_new);
+  RUN_TEST(test_hashmap_assoc);
   RUN_TEST(test_hashmap_get);
   RUN_TEST(test_hashmap_dissoc);
-  RUN_TEST(test_hashmap_assoc);
+  RUN_TEST(test_hashmap_count);
+  RUN_TEST(test_hashmap_int_keys);
+  RUN_TEST(test_hashmap_int_vals);
+  RUN_TEST(test_hashmap_collisions);
+
+  RUN_TEST(test_hashmap_visit_count);
+  RUN_TEST(test_hashmap_visit_list);
   RUN_TEST(test_hashmap_iterator);
+  RUN_TEST(test_hashmap_readme);
 
   return UNITY_END();
 }
-
-
 
 /* Unity MACROS */
 
