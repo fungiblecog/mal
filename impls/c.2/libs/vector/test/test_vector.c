@@ -10,7 +10,7 @@
 #define BUFFER_SIZE 32
 
 /* number of items to add to test lists */
-#define TEST_ITERATIONS 100
+#define TEST_ITERATIONS 10000
 
 Vector *vector_reverse(Vector *vec);
 
@@ -102,6 +102,10 @@ void test_vector_get(void)
     /* test a random index has the right values */
     TEST_ASSERT_EQUAL_STRING(val, nth_val);
   }
+
+  /* test out of bounds */
+  TEST_ASSERT_NULL(vector_get(vec, -1));
+  TEST_ASSERT_NULL(vector_get(vec, TEST_ITERATIONS+1));
 }
 
 void test_vector_set(void) {
