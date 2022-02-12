@@ -3,8 +3,8 @@
 
 typedef struct Iterator_s Iterator;
 
-/* a function that takes an Iterator* and returns an Iterator*
-   for the next in the sequence */
+/* a function that takes an Iterator* and returns
+   an Iterator* for the next in the sequence */
 typedef Iterator *((*iter_fn)(Iterator *iter));
 
 struct Iterator_s {
@@ -12,12 +12,9 @@ struct Iterator_s {
   void *value;
   /* a function to get the next iterator (mandatory) */
   iter_fn next_fn;
-
   /* a reference to the current position (optional) */
   void *current;
-  /* a reference to the source data collection (optional) */
-  void *source;
-  /* arbitrary place to store any data needed by the iterator between calls to next (optional) */
+  /* a place to store anything needed between calls to next (optional) */
   void *data;
 };
 

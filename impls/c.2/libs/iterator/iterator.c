@@ -16,14 +16,11 @@ inline void *iterator_value(Iterator *iter) {
 inline Iterator *iterator_copy(Iterator *iter) {
   assert(iter != NULL);
 
-  Iterator *new_iter = GC_MALLOC(sizeof(*new_iter));
+  Iterator *new = GC_MALLOC(sizeof(*new));
+  new->next_fn = iter->next_fn;
+  new->current = iter->current;
+  new->value = iter->value;
+  new->data = iter->data;
 
-  new_iter->next_fn = iter->next_fn;
-  new_iter->current = iter->current;
-  new_iter->value = iter->value;
-
-  new_iter->source = iter->source;
-  new_iter->data = iter->data;
-
-  return new_iter;
+  return new;
 }

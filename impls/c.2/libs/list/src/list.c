@@ -181,15 +181,15 @@ static Iterator *list_next_fn(Iterator *iter) {
   /* check for end of the list */
   if (!current) { return NULL; }
 
-  Iterator *new_iter = iterator_copy(iter);
+  Iterator *new = iterator_copy(iter);
 
   /* set the next pair */
-  new_iter->current = current;
+  new->current = current;
 
   /* set the next value */
-  new_iter->value = current->data;
+  new->value = current->data;
 
-  return new_iter;
+  return new;
 }
 
 
@@ -204,16 +204,13 @@ Iterator *list_iterator_make(List *lst)
   /* install the next function for a list */
   iter->next_fn = list_next_fn;
 
-  /* source not needed */
-  /* iter->source = lst; */
-
   /* set current to a pointer to the head of the list */
   iter->current = lst;
 
   /* set value to the value of list head */
   iter->value = lst->data;
 
-  /* data not needed */
+  /* data not used */
   /* iter->data = */
 
   return iter;

@@ -150,7 +150,7 @@ static void bitmap_indexed_visit(Node *self, visit_fn fn, void **acc);
 
 static void hash_collision_visit(Node *self, visit_fn fn, void **acc);
 
-static void iter_visit(void *key, void *val, void **acc);
+static void iterator_visit(void *key, void *val, void **acc);
 
 static Iterator *hashmap_next_fn(Iterator *iter);
 
@@ -314,12 +314,9 @@ Iterator *hashmap_iterator_make(Hashmap *map) {
   /* install the next function for a hashmap */
   iter->next_fn = hashmap_next_fn;
 
-  /* save the data source - not required for this data structure */
-  /* iter->source = map; */
-
   /* create a list of key/val pairs */
   list *lst = NULL;
-  hashmap_visit(map, iter_visit, (void **)&lst);
+  hashmap_visit(map, iterator_visit, (void **)&lst);
 
   /* if there are no key/val pairs */
   if (!lst) { return NULL; }
@@ -329,7 +326,7 @@ Iterator *hashmap_iterator_make(Hashmap *map) {
   iter->value = lst->data;
 
   /* not using data */
-  /* iter->data = (void *)1; */
+  /* iter->data  */
 
   return iter;
 }
@@ -818,7 +815,7 @@ static void hash_collision_visit(Node *self, visit_fn fn, void **acc) {
 }
 
 /* function to visit each node and create a list of key/val pairs */
-static void iter_visit(void *key, void *val, void **acc) {
+static void iterator_visit(void *key, void *val, void **acc) {
 
   /* acc holds a pointer to the list being generated */
   list *lst = *(struct list **)acc;

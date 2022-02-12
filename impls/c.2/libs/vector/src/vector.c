@@ -228,7 +228,6 @@ Vector *vector_pop(Vector *vec) {
   return copy;
 }
 
-
 void *vector_get(Vector *vec, int idx) {
 
   /* check the bounds */
@@ -288,21 +287,21 @@ Vector *vector_set(Vector *vec, int idx, void *data) {
 static Iterator *vector_next_fn(Iterator *iter) {
   assert(iter != NULL);
 
-  Vector *vec = iter->source;
+  Vector *vec = iter->data;
   uintptr_t idx = (uintptr_t)++iter->current;
 
   /* check for end of the array */
   if (idx == vec->count) { return NULL; }
 
-  Iterator *new_iter = iterator_copy(iter);
+  Iterator *new = iterator_copy(iter);
 
   /* increment the current pointer */
-  new_iter->current = (void *)idx;
+  new->current = (void *)idx;
 
   /* set the next value */
-  new_iter->value = vector_get(vec, idx);
+  new->value = vector_get(vec, idx);
 
-  return new_iter;
+  return new;
 }
 
 Iterator *vector_iterator_make(Vector *vec) {
@@ -317,8 +316,8 @@ Iterator *vector_iterator_make(Vector *vec) {
   /* install the next function for a vector */
   iter->next_fn = vector_next_fn;
 
-  /* save the data source */
-  iter->source = vec;
+  /* save a reference to the source data */
+  iter->data = vec;
 
   /* set current to the intial array index */
   iter->current = (void *)0;
@@ -326,9 +325,5 @@ Iterator *vector_iterator_make(Vector *vec) {
   /* set value to the value of the first array element */
   iter->value = vector_get(vec, 0);
 
-  /* data not used */
-  /* iter->data = ; */
-
   return iter;
-
 }
