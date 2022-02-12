@@ -22,10 +22,137 @@
 
 #include "hashmap.h"
 
+#define BITS_PER_LEVEL 5
+
+#define UNCHANGED 0
+#define ADDED 1
+#define UPDATED 2
+#define REMOVED 3
+
 /*
    for explanations see:
    http://blog.higher-order.net/2009/09/08/understanding-clojures-persistenthashmap-deftwice
 */
+
+/* Implementation details */
+typedef struct NodeType NodeType;
+typedef struct Node Node;
+typedef struct LeafNode LeafNode;
+typedef struct BitmapIndexedNode BitmapIndexedNode;
+typedef struct HashCollisionNode HashCollisionNode;
+
+typedef void *(*get_fn)(Node *self, int level, void *key, \
+			hash_t hash, equal_fn eq_key, equal_fn eq_val);
+
+typedef Node *(*assoc_fn)(Node *self, int level, void *key, void *val, \
+			  hash_t hash, equal_fn eq_key, equal_fn eq_val, int *result);
+
+typedef Node *(*dissoc_fn)(Node *self, int level, void *key, hash_t hash, \
+			   equal_fn eq_key, equal_fn eq_val, int *result);
+
+typedef void (*visitor_fn)(Node *self, visit_fn fn, void **acc);
+
+/* hashmap links to nodes and holds functions for
+   operating on otherwise generic keys and vals */
+struct Hashmap {
+  hash_fn hash;
+  equal_fn eq_key;
+  equal_fn eq_val;
+  int count;
+  Node* root;
+};
+
+/* polymorphic dispatch through the common NodeType */
+struct NodeType {
+  get_fn get;
+  assoc_fn assoc;
+  dissoc_fn dissoc;
+  visitor_fn visitor;
+};
+
+/* generic node */
+struct Node {
+  NodeType *type;
+};
+
+/* holds a key/value pair */
+struct LeafNode {
+  NodeType *type;
+  void *key;
+  void *val;
+  hash_t hash;
+};
+
+/* a linked list of nodes with the same hash */
+struct HashCollisionNode {
+  NodeType *type;
+  void *key;
+  void *val;
+  hash_t hash;
+
+  HashCollisionNode *next;
+};
+
+/* a dynamically sized array of up to 32 child nodes */
+struct BitmapIndexedNode {
+  NodeType *type;
+  int bitmap;
+  Node **children;
+};
+
+/* basic list structure for implementing an iterator */
+typedef struct list {
+  void *data;
+  struct list *next;
+} list;
+
+/* forward references */
+static hash_t hash_str(void *obj);
+
+static int equal_str(void *obj1, void *obj2);
+
+static LeafNode *new_leaf_node(void *key, void *val, hash_t hash);
+
+static HashCollisionNode *new_hash_collision_node(void *key, void* val, hash_t hash);
+
+static BitmapIndexedNode *new_bitmap_indexed_node();
+
+static void *leaf_get(Node *self, int level, void *key, \
+                      hash_t hash, equal_fn eq_key, equal_fn eq_val);
+
+static void *bitmap_indexed_get(Node *self, int level, void *key, \
+                                hash_t hash, equal_fn eq_key, equal_fn eq_val);
+
+static void *hash_collision_get(Node *self, int level, void *key,	\
+                                hash_t hash, equal_fn eq_key, equal_fn eq_val);
+
+static Node *leaf_assoc(Node *self, int level, void *key, void *val, \
+                        hash_t hash, equal_fn eq_key, equal_fn eq_val, int *result);
+
+static Node *bitmap_indexed_assoc(Node *self, int level, void *key, void *val, \
+                                  hash_t hash, equal_fn eq_key, equal_fn eq_val, int *result);
+
+static Node *hash_collision_assoc(Node *self, int level, void *key, void *val, \
+                                  hash_t hash, equal_fn eq_key, equal_fn eq_val, int *result);
+
+static Node *leaf_dissoc(Node *self, int level, void *key, hash_t hash, \
+                         equal_fn eq_key, equal_fn eq_val, int *result);
+
+static Node *bitmap_indexed_dissoc(Node *self, int level, void *key, hash_t hash, \
+                                   equal_fn eq_key, equal_fn eq_val, int *result);
+
+static Node *hash_collision_dissoc(Node *self, int level, void *key, hash_t hash, \
+                                   equal_fn eq_key, equal_fn eq_val, int *result);
+
+static void leaf_visit(Node *self, visit_fn fn, void **acc);
+
+static void bitmap_indexed_visit(Node *self, visit_fn fn, void **acc);
+
+static void hash_collision_visit(Node *self, visit_fn fn, void **acc);
+
+static void iter_visit(void *key, void *val, void **acc);
+
+static Iterator *hashmap_next_fn(Iterator *iter);
 
 /* constant NodeTypes */
 
@@ -40,29 +167,6 @@ NodeType NT_BITMAP_INDEXED = {bitmap_indexed_get, bitmap_indexed_assoc, \
 NodeType NT_HASH_COLLISION = {hash_collision_get, hash_collision_assoc, \
                               hash_collision_dissoc, hash_collision_visit};
 
-/*
-   default hash implementation djb2 * this algorithm was
-   first reported by Dan Bernstein * many years ago in comp.lang.c
-*/
-static hash_t hash_str(void *obj) {
-
-  hash_t hash = 5381;
-
-  int c;
-  while ((c = *(char*)obj++)) {
-    hash = ((hash << 5) + hash) + c;
-  }
-  return hash;
-}
-
-/* default comparison operation */
-static int equal_str(void *obj1, void *obj2) {
-
-  return (strcmp((char *)obj1, (char *)obj2) == 0);
-}
-
-/* generic utilities */
-
 /* count 1's in x efficiently */
 #define popcount(x) __builtin_popcount(x)
 
@@ -75,17 +179,17 @@ static int equal_str(void *obj1, void *obj2) {
 
 /* shift hash by 'level'. Each level is BITS_PER_LEVEL bits
    which is 5 by default giving [0-31] children */
-int mask(hash_t hash, int level){
+static int mask(hash_t hash, int level){
   return (hash >> (BITS_PER_LEVEL * level)) & 0x01f;
 }
 
 /* map a hash code [0-31] to a bit in the bitmap 2^[0-31] */
-int bitpos(hash_t hash, int level){
+static int bitpos(hash_t hash, int level){
   return 1 << mask(hash, level);
 }
 
 /* return the number of 1's in bitmap less than bit */
-int bit_index(int bitmap, int bit){
+static int bit_index(int bitmap, int bit){
   return popcount(bitmap & (bit - 1));
 }
 
@@ -198,55 +302,6 @@ void hashmap_visit(Hashmap *map, visit_fn fn, void** acc) {
   (map->root)->type->visitor(map->root, fn, acc);
 }
 
-/* basic list structure for implementing an iterator */
-typedef struct iter_list {
-  void *data;
-  struct iter_list *next;
-} iter_list;
-
-/* function to visit each node and create a list of key/val pairs */
-static void hashmap_iter_visit(void *key, void *val, void **acc) {
-
-  /* acc holds a pointer to the list being generated */
-  iter_list *lst = *(struct iter_list **)acc;
-
-  /* create a list node to hold the next value */
-  iter_list *lst_val = GC_MALLOC(sizeof(iter_list));
-  lst_val->data = val;
-  lst_val->next = lst;
-
-  /* create a list node to hold the next key */
-  iter_list *lst_key = GC_MALLOC(sizeof(iter_list));
-  lst_key->data = key;
-  lst_key->next = lst_val;
-
-  /* return the updated list in acc */
-  *acc = lst_key;
-}
-
-/* function to advance the iterator */
-static Iterator *hashmap_next_fn(Iterator *iter) {
-  assert(iter != NULL);
-
-  /* iter->current points to a hashmap entry */
-  iter_list *current = iter->current;
-
-  /* check for the end of the data */
-  if (!current->next) { return NULL; }
-
-  /* advance the pointer */
-  current = current->next;
-
-  /* create a new iterator */
-  Iterator *new = iterator_copy(iter);
-
-  /* set the iterator values */
-  new->current = current;
-  new->value = current->data;
-
-  return new;
-}
-
 Iterator *hashmap_iterator_make(Hashmap *map) {
   assert(map != NULL);
 
@@ -263,8 +318,8 @@ Iterator *hashmap_iterator_make(Hashmap *map) {
   /* iter->source = map; */
 
   /* create a list of key/val pairs */
-  iter_list *lst = NULL;
-  hashmap_visit(map, hashmap_iter_visit, (void **)&lst);
+  list *lst = NULL;
+  hashmap_visit(map, iter_visit, (void **)&lst);
 
   /* if there are no key/val pairs */
   if (!lst) { return NULL; }
@@ -280,7 +335,7 @@ Iterator *hashmap_iterator_make(Hashmap *map) {
 }
 
 /* internal implementation */
-LeafNode *new_leaf_node(void *key, void *val, hash_t hash) {
+static LeafNode *new_leaf_node(void *key, void *val, hash_t hash) {
 
   LeafNode *node = GC_MALLOC(sizeof(LeafNode));
   node->type = &NT_LEAF;
@@ -291,7 +346,7 @@ LeafNode *new_leaf_node(void *key, void *val, hash_t hash) {
   return node;
 }
 
-BitmapIndexedNode *new_bitmap_indexed_node() {
+static BitmapIndexedNode *new_bitmap_indexed_node() {
 
   BitmapIndexedNode *node = GC_MALLOC(sizeof(BitmapIndexedNode));
   node->type = &NT_BITMAP_INDEXED;
@@ -300,7 +355,7 @@ BitmapIndexedNode *new_bitmap_indexed_node() {
   return node;
 }
 
-HashCollisionNode *new_hash_collision_node(void *key, void* val, hash_t hash) {
+static HashCollisionNode *new_hash_collision_node(void *key, void* val, hash_t hash) {
 
   HashCollisionNode *node = GC_MALLOC(sizeof(HashCollisionNode));
   node->type = &NT_HASH_COLLISION;
@@ -312,8 +367,8 @@ HashCollisionNode *new_hash_collision_node(void *key, void* val, hash_t hash) {
   return node;
 }
 
-void *leaf_get(Node *self, int level, void *key, hash_t hash, \
-               equal_fn eq_key, equal_fn eq_val) {
+static void *leaf_get(Node *self, int level, void *key, hash_t hash, \
+                      equal_fn eq_key, equal_fn eq_val) {
 
   LeafNode* node = (LeafNode*)self;
 
@@ -327,8 +382,8 @@ void *leaf_get(Node *self, int level, void *key, hash_t hash, \
   }
 }
 
-void *bitmap_indexed_get(Node *self, int level, void *key, hash_t hash, \
-                         equal_fn eq_key, equal_fn eq_val) {
+static void *bitmap_indexed_get(Node *self, int level, void *key, hash_t hash, \
+                                equal_fn eq_key, equal_fn eq_val) {
 
   BitmapIndexedNode *node = (BitmapIndexedNode*)self;
 
@@ -347,8 +402,8 @@ void *bitmap_indexed_get(Node *self, int level, void *key, hash_t hash, \
   }
 }
 
-void *hash_collision_get(Node *self, int level, void *key, hash_t hash, \
-                         equal_fn eq_key, equal_fn eq_val) {
+static void *hash_collision_get(Node *self, int level, void *key, hash_t hash, \
+                                equal_fn eq_key, equal_fn eq_val) {
 
   HashCollisionNode *node = (HashCollisionNode*)self;
 
@@ -366,8 +421,8 @@ void *hash_collision_get(Node *self, int level, void *key, hash_t hash, \
   }
 }
 
-Node *leaf_assoc(Node *self, int level, void *key, void *val, hash_t hash, \
-                 equal_fn eq_key, equal_fn eq_val, int *result) {
+static Node *leaf_assoc(Node *self, int level, void *key, void *val, hash_t hash, \
+                        equal_fn eq_key, equal_fn eq_val, int *result) {
 
   LeafNode *node = (LeafNode*)self;
 
@@ -452,8 +507,8 @@ Node *leaf_assoc(Node *self, int level, void *key, void *val, hash_t hash, \
   }
 }
 
-Node *bitmap_indexed_assoc(Node *self, int level, void *key, void *val, hash_t hash, \
-                           equal_fn eq_key, equal_fn eq_val, int *result) {
+static Node *bitmap_indexed_assoc(Node *self, int level, void *key, void *val, hash_t hash, \
+                                  equal_fn eq_key, equal_fn eq_val, int *result) {
 
   BitmapIndexedNode *node = (BitmapIndexedNode*)self;
 
@@ -534,8 +589,8 @@ Node *bitmap_indexed_assoc(Node *self, int level, void *key, void *val, hash_t h
   }
 }
 
-Node *hash_collision_assoc(Node *self, int level, void *key, void *val, hash_t hash, \
-                           equal_fn eq_key, equal_fn eq_val, int *result) {
+static Node *hash_collision_assoc(Node *self, int level, void *key, void *val, hash_t hash, \
+                                  equal_fn eq_key, equal_fn eq_val, int *result) {
 
   HashCollisionNode *node = (HashCollisionNode*)self;
 
@@ -600,8 +655,8 @@ Node *hash_collision_assoc(Node *self, int level, void *key, void *val, hash_t h
   return (Node*)copy;
 }
 
-Node *leaf_dissoc(Node *self, int level, void *key, hash_t hash, \
-                  equal_fn eq_key, equal_fn eq_val, int *result) {
+static Node *leaf_dissoc(Node *self, int level, void *key, hash_t hash, \
+                         equal_fn eq_key, equal_fn eq_val, int *result) {
 
   /* dissocing a leaf node creates a NULL Node */
   LeafNode* node = (LeafNode*)self;
@@ -617,8 +672,8 @@ Node *leaf_dissoc(Node *self, int level, void *key, hash_t hash, \
   }
 }
 
-Node *bitmap_indexed_dissoc(Node *self, int level, void *key, hash_t hash, \
-                            equal_fn eq_key, equal_fn eq_val, int *result) {
+static Node *bitmap_indexed_dissoc(Node *self, int level, void *key, hash_t hash, \
+                                   equal_fn eq_key, equal_fn eq_val, int *result) {
 
   BitmapIndexedNode *node = (BitmapIndexedNode*)self;
 
@@ -689,8 +744,8 @@ Node *bitmap_indexed_dissoc(Node *self, int level, void *key, hash_t hash, \
   }
 }
 
-Node *hash_collision_dissoc(Node *self, int level, void *key, hash_t hash, \
-                            equal_fn eq_key, equal_fn eq_val, int *result) {
+static Node *hash_collision_dissoc(Node *self, int level, void *key, hash_t hash, \
+                                   equal_fn eq_key, equal_fn eq_val, int *result) {
 
   HashCollisionNode *node = (HashCollisionNode*)self;
 
@@ -735,13 +790,13 @@ Node *hash_collision_dissoc(Node *self, int level, void *key, hash_t hash, \
   return (Node*)copy;
 }
 
-void leaf_visit(Node *self, visit_fn fn, void **acc) {
+static void leaf_visit(Node *self, visit_fn fn, void **acc) {
 
   LeafNode* node = (LeafNode*)self;
   fn(node->key, node->val, acc);
 }
 
-void bitmap_indexed_visit(Node *self, visit_fn fn, void **acc) {
+static void bitmap_indexed_visit(Node *self, visit_fn fn, void **acc) {
 
   BitmapIndexedNode *node = (BitmapIndexedNode*)self;
   int nodes = popcount(node->bitmap);
@@ -752,7 +807,7 @@ void bitmap_indexed_visit(Node *self, visit_fn fn, void **acc) {
   }
 }
 
-void hash_collision_visit(Node *self, visit_fn fn, void **acc) {
+static void hash_collision_visit(Node *self, visit_fn fn, void **acc) {
 
   HashCollisionNode *node = (HashCollisionNode*)self;
 
@@ -760,4 +815,68 @@ void hash_collision_visit(Node *self, visit_fn fn, void **acc) {
     fn(node->key, node->val, acc);
     node = node->next;
   }
+}
+
+/* function to visit each node and create a list of key/val pairs */
+static void iter_visit(void *key, void *val, void **acc) {
+
+  /* acc holds a pointer to the list being generated */
+  list *lst = *(struct list **)acc;
+
+  /* create a list node to hold the next value */
+  list *lst_val = GC_MALLOC(sizeof(list));
+  lst_val->data = val;
+  lst_val->next = lst;
+
+  /* create a list node to hold the next key */
+  list *lst_key = GC_MALLOC(sizeof(list));
+  lst_key->data = key;
+  lst_key->next = lst_val;
+
+  /* return the updated list in acc */
+  *acc = lst_key;
+}
+
+/* function to advance the iterator */
+static Iterator *hashmap_next_fn(Iterator *iter) {
+  assert(iter != NULL);
+
+  /* iter->current points to a hashmap entry */
+  list *current = iter->current;
+
+  /* check for the end of the data */
+  if (!current->next) { return NULL; }
+
+  /* advance the pointer */
+  current = current->next;
+
+  /* create a new iterator */
+  Iterator *new = iterator_copy(iter);
+
+  /* set the iterator values */
+  new->current = current;
+  new->value = current->data;
+
+  return new;
+}
+
+/*
+   default hash implementation djb2 * this algorithm was
+   first reported by Dan Bernstein * many years ago in comp.lang.c
+*/
+static hash_t hash_str(void *obj) {
+
+  hash_t hash = 5381;
+
+  int c;
+  while ((c = *(char*)obj++)) {
+    hash = ((hash << 5) + hash) + c;
+  }
+  return hash;
+}
+
+/* default comparison operation */
+static int equal_str(void *obj1, void *obj2) {
+
+  return (strcmp((char *)obj1, (char *)obj2) == 0);
 }

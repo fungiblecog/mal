@@ -1612,7 +1612,7 @@ MalType *mal_conj(List *args) {
   }
   else /* is_vector(lst) */ {
 
-    Vector *vec = vector_copy(coll->value.mal_vector);
+    Vector *vec = coll->value.mal_vector;
 
     while (rest) {
       vec = vector_push(vec, rest->data);

@@ -322,7 +322,7 @@ int cmp_maltypes(void *val1, void *val2) {
 /* conversion uses iterator interface */
 List *vector_to_list(Vector *vec) {
 
-  if(vec->count == 0) { return NULL; }
+  if(vector_empty(vec)) { return NULL; }
 
   List *lst = NULL;
   Iterator *iter = vector_iterator_make(vec);

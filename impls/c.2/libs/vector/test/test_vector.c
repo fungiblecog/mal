@@ -1,6 +1,6 @@
 #include "../../unity/src/unity.h"
 #include "../src/vector.h"
-#include "gc.h"
+#include <gc.h>
 
 /* included for time and rand functions */
 #include <time.h>
@@ -159,42 +159,6 @@ void test_vector_count(void)
   }
 }
 
-void test_vector_copy(void)
-{
-  Vector *vec = vector_make();
-
-  for (int i = 0; i < TEST_ITERATIONS; i++) {
-    char* val = make_test_str(i);
-    vec = vector_push(vec, (void *)val);
-  }
-
-  Vector *copy = vector_copy(vec);
-
-  /* check size and count are the same in copy */
-  TEST_ASSERT_EQUAL_INT(vec->size, copy->size);
-  TEST_ASSERT_EQUAL_INT(vec->count, copy->count);
-  /* check data array is at a different address */
-  TEST_ASSERT_NOT_EQUAL_INT(&vec->data, &copy->data);
-
-  for (int i = 0; i < TEST_ITERATIONS; i++) {
-    /* check all elements are the same */
-    TEST_ASSERT_EQUAL_STRING(vector_get(vec, i), vector_get(copy, i));
-    /* check that the elements are in different memory locations */
-    TEST_ASSERT_NOT_EQUAL_INT(&vec->data[i], &copy->data[i]);
-  }
-
-  /* modify the original vector */
-  for (int i = 0; i < TEST_ITERATIONS; i++) {
-    vec->data[i] = "updated";
-  }
-
-  /* copy is unchanged */
-  for (int i = 0; i < TEST_ITERATIONS; i++) {
-    /* check all elements are not the same */
-    TEST_ASSERT_NOT_EQUAL_INT(vector_get(vec, i), vector_get(copy, i));
-  }
-}
-
 void test_vector_iterator(void) {
 
   Vector *vec = vector_make();
@@ -236,7 +200,6 @@ int main(void)
   RUN_TEST(test_vector_set);
   RUN_TEST(test_vector_empty);
   RUN_TEST(test_vector_count);
-  RUN_TEST(test_vector_copy);
   RUN_TEST(test_vector_iterator);
 
   return UNITY_END();

@@ -14,128 +14,55 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "../../include/hashmap.h"
+#ifndef _PERSISTENT_HASHMAP_H
+#define _PERSISTENT_HASHMAP_H
 
-#ifndef _PERSISTENT_HASHMAP_INTERNAL_H
-#define _PERSISTENT_HASHMAP_INTERNAL_H
+#include "../../iterator/iterator.h"
 
-#define BITS_PER_LEVEL 5
+/* External Interface */
 
-#define UNCHANGED 0
-#define ADDED 1
-#define UPDATED 2
-#define REMOVED 3
+/* type for hashes */
+typedef unsigned int hash_t;
+
+/* type for Hashmaps */
+typedef struct Hashmap Hashmap;
+
+/* type signature for generic equality function */
+typedef int (*equal_fn)(void *val1, void *val2);
+
+/* type signature for generic hash function */
+typedef hash_t (*hash_fn)(void *key);
+
+/* type signature for a generic function to apply to all nodes */
+typedef void (*visit_fn)(void *key, void *val, void **result);
 
 /*
-   for explanations see:
-   http://blog.higher-order.net/2009/09/08/understanding-clojures-persistenthashmap-deftwice
+create a new hashmap. provide three functions that:
+- returns a hash given a key
+- tests two keys for equality (and returns 1 (true) or 0 (false))
+- tests two values for equality (and returns 1 (true) or 0 (false))
 */
+Hashmap *hashmap_make(hash_fn hash, equal_fn eql_keys, equal_fn eql_vals);
 
-/* Implementation details */
-typedef struct NodeType NodeType;
-typedef struct Node Node;
-typedef struct LeafNode LeafNode;
-typedef struct BitmapIndexedNode BitmapIndexedNode;
-typedef struct HashCollisionNode HashCollisionNode;
+/* true if there are no key/value pairs */
+int hashmap_empty(Hashmap *map);
 
-typedef void *(*get_fn)(Node *self, int level, void *key, \
-			hash_t hash, equal_fn eq_key, equal_fn eq_val);
+/* returns a count of key/value pairs stored in map */
+int hashmap_count(Hashmap* map);
 
-typedef Node *(*assoc_fn)(Node *self, int level, void *key, void *val, \
-			  hash_t hash, equal_fn eq_key, equal_fn eq_val, int *result);
+/* returns a hashmap that is the same as map but with key and val added */
+Hashmap *hashmap_assoc(Hashmap* map, void* key, void* val);
 
-typedef Node *(*dissoc_fn)(Node *self, int level, void *key, hash_t hash, \
-			   equal_fn eq_key, equal_fn eq_val, int *result);
+/* returns a hashmap that is the same as map but with key
+   (and associated val) removed if it exists */
+Hashmap *hashmap_dissoc(Hashmap* map, void* key);
 
-typedef void (*visitor_fn)(Node *self, visit_fn fn, void **acc);
+/* returns the value associated with key if it exists in map or NULL */
+void *hashmap_get(Hashmap* map, void* key);
 
-/* hashmap holds a reference to the nodes, the node count and the functions to use for
-   generating a hash and testing keys and values for equality */
-struct Hashmap {
-  hash_fn hash;
-  equal_fn eq_key;
-  equal_fn eq_val;
-  int count;
-  Node* root;
-};
+/* return an iterator for a hashmap */
+Iterator *hashmap_iterator_make(Hashmap *map);
 
-/* polymorphic dispatch */
-struct NodeType {
-  get_fn get;
-  assoc_fn assoc;
-  dissoc_fn dissoc;
-  visitor_fn visitor;
-};
-
-/* generic node */
-struct Node {
-  NodeType *type;
-};
-
-/* holds a key/value pair */
-struct LeafNode {
-  NodeType *type;
-  void *key;
-  void *val;
-  hash_t hash;
-};
-
-/* a linked list of LeafNodes with the same hash */
-struct HashCollisionNode {
-  NodeType *type;
-  void *key;
-  void *val;
-  hash_t hash;
-
-  HashCollisionNode *next;
-};
-
-/* a dynamically sized array of up to 32 child nodes */
-struct BitmapIndexedNode {
-  NodeType *type;
-  int bitmap;
-  Node **children;
-};
-
-
-/* forward references */
-LeafNode *new_leaf_node(void *key, void *val, hash_t hash);
-
-HashCollisionNode *new_hash_collision_node(void *key, void* val, hash_t hash);
-
-BitmapIndexedNode *new_bitmap_indexed_node();
-
-void *leaf_get(Node *self, int level, void *key, \
-	       hash_t hash, equal_fn eq_key, equal_fn eq_val);
-
-void *bitmap_indexed_get(Node *self, int level, void *key, \
-			 hash_t hash, equal_fn eq_key, equal_fn eq_val);
-
-void *hash_collision_get(Node *self, int level, void *key,	\
-			 hash_t hash, equal_fn eq_key, equal_fn eq_val);
-
-Node *leaf_assoc(Node *self, int level, void *key, void *val, \
-		 hash_t hash, equal_fn eq_key, equal_fn eq_val, int *result);
-
-Node *bitmap_indexed_assoc(Node *self, int level, void *key, void *val, \
-			   hash_t hash, equal_fn eq_key, equal_fn eq_val, int *result);
-
-Node *hash_collision_assoc(Node *self, int level, void *key, void *val, \
-			   hash_t hash, equal_fn eq_key, equal_fn eq_val, int *result);
-
-Node *leaf_dissoc(Node *self, int level, void *key, hash_t hash, \
-		  equal_fn eq_key, equal_fn eq_val, int *result);
-
-Node *bitmap_indexed_dissoc(Node *self, int level, void *key, hash_t hash, \
-			    equal_fn eq_key, equal_fn eq_val, int *result);
-
-Node *hash_collision_dissoc(Node *self, int level, void *key, hash_t hash, \
-			    equal_fn eq_key, equal_fn eq_val, int *result);
-
-void leaf_visit(Node *self, visit_fn fn, void **acc);
-
-void bitmap_indexed_visit(Node *self, visit_fn fn, void **acc);
-
-void hash_collision_visit(Node *self, visit_fn fn, void **acc);
-
+/* applies fn to every key/value pair along with acc which accumulates the result */
+void hashmap_visit(Hashmap* map, visit_fn fn, void **acc);
 #endif
